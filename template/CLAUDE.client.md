@@ -11,6 +11,7 @@
 ## third-party/: nobody edits it
 - `third-party/core2` is core2, a git submodule pinned to a release tag{% if ui == "imgui" %}; `third-party/imgui` is Dear ImGui, pinned the same way{% endif %}. Never edit files there, not even comments.
 - A change needed in core2 goes through core2's own repo and gate (branch, tests, review, release, tag). Say what is needed; don't work around it here.
+
 ## core2's code (`third-party/core2`): never, and no grant opens it
 core2 protects these in its own repo, and they stay protected here:
 - `third-party/core2/src/`, `examples/`, `Makefile` and `core.mk`: the author's code in core2. Never write or modify them, not even comments or Doxygen. A grant to change code in this project never covers them.
@@ -34,6 +35,12 @@ In this project, modules use `{{project-name | snake_case}}::<name>` namespaces 
 - Sources: `src/**/*.cpp` (each may `import core;`) and the project's modules `src/**/*.cppm` (`export module <name>;`, scanned by core.mk like core2's own).
 {%- if ui == "plain" %}
 - UI: plain console, through `base::console`.
+{%- elsif ui == "ncurses" %}
+- UI: ncurses (`ncursesw`, through pkg-config). curses owns the terminal between `initscr` and `endwin`: no `console::print` in between. Without a terminal on stdin and stdout, `main` prints through core2 instead.
+{%- elsif ui == "sdl3" %}
+- UI: SDL3 with SDL_Renderer (`sdl3`, through pkg-config). SDL's C headers are used as-is.
+{%- else %}
+- UI: Dear ImGui with the {{imgui_backend}} backends, in `third-party/imgui` (pinned like core2, never edited). The Makefile compiles ImGui with its own flags (no `-nostdinc++`, no warnings, `-fno-threadsafe-statics`), and the project's sources see its headers as system headers. Platform libraries come through pkg-config. `imgui.ini` (window positions) is git-ignored.
 {%- endif %}
 - IDE: clangd reads `compile_commands.json` (git-ignored), made by `make bear`; regenerate it when files are added, renamed or removed.
 - No tests yet.

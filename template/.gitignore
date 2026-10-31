@@ -3,3 +3,5 @@
 compile_commands.json
 /.claude/settings.local.json
 /proposals
+{% if ui == "imgui" %}imgui.ini
+{% endif %}

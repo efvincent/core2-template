@@ -5,7 +5,7 @@ A [cargo-generate](https://github.com/cargo-generate/cargo-generate) template fo
 ## Generating a project
 
 ```sh
-cargo generate --git git@github.com:efvincent/core2-template.git template --name my-app
+cargo generate --git https://github.com/efvincent/core2-template.git template --name my-app
 sh my-app/setup.sh
 cd my-app && make && ./build/my-app_debug
 ```
@@ -38,9 +38,9 @@ All variants: `clang++` with C++26 modules (checked with clang 23), GNU make 4.2
 
 Dear ImGui itself comes in as a submodule; it needs network access to GitHub (HTTPS) during `setup.sh`.
 
-Status: `plain` works; the other variants follow ([docs/todo.md](docs/todo.md)).
+Status: every variant generates and builds; `glfw_vulkan` needs the Vulkan headers installed (`vulkan-headers` on Arch) ([docs/todo.md](docs/todo.md)).
 
 ## Working on the template
 - [docs/design.md](docs/design.md): how it works, and why.
 - [docs/decisions.md](docs/decisions.md): the decisions, with dates.
-- `./check.sh` generates every variant into a temp dir, builds each in every mode, and runs the ones that can run headless. It uses the core2 clone at `~/code/cpp/core2` (`CORE2_DIR` overrides it) and the default tag from `template/cargo-generate.toml` (`CORE2_VERSION` overrides it).
+- `./check.sh` generates every variant into a temp dir, builds each in every mode, and runs the ones that can run headless (`WINDOWED=1` also runs the rest on the real display, for 2 seconds each). It uses the core2 clone at `~/code/cpp/core2` (`CORE2_DIR` overrides it) and the default tag from `template/cargo-generate.toml` (`CORE2_VERSION` overrides it).

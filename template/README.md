@@ -15,7 +15,7 @@ git submodule update --init
 Without the submodules, `make` stops with a message, and Claude Code's comment-only hook (which lives in `third-party/core2`) blocks every edit.
 
 ## Building
-Needs `clang++` with C++26 modules and GNU make 4.2 or later.
+Needs `clang++` with C++26 modules and GNU make 4.2 or later{% if ui == "ncurses" %}, and the ncursesw development files (`pkg-config ncursesw`){% elsif ui == "sdl3" %}, and SDL3 (`pkg-config sdl3`){% elsif ui == "imgui" %}{% if imgui_backend == "sdl3_renderer" or imgui_backend == "sdl3_gpu" %}, and SDL3 (`pkg-config sdl3`){% elsif imgui_backend == "glfw_opengl3" %}, GLFW and OpenGL (`pkg-config glfw3 gl`){% else %}, GLFW, the Vulkan loader and the Vulkan headers (`pkg-config glfw3 vulkan`, and `vulkan/vulkan.h`){% endif %}{% endif %}.
 
 | Command | Builds |
 |---|---|
@@ -30,6 +30,10 @@ Needs `clang++` with C++26 modules and GNU make 4.2 or later.
 
 Sources: `src/**/*.cpp` and the project's modules `src/**/*.cppm`. core2's `third-party/core2/core.mk` builds core2 with the same flags and scans the project's modules for their imports.
 
+{% if ui == "imgui" -%}
+Dear ImGui (`third-party/imgui`, pinned to `v1.92.8`) is compiled by the Makefile with its own flags; bump it the same way as core2 (below). It saves window positions to `imgui.ini` in the working directory (git-ignored).
+
+{% endif -%}
 ## Editor
 VS Code with clangd and CodeLLDB: run `make bear` once (and again when files are added or removed), then F5 builds and debugs `build/{{project-name}}_debug`.
 

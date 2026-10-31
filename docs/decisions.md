@@ -11,6 +11,7 @@ Made by the author unless noted. Carried over from the handoff brief written at 
 7. **Generator: cargo-generate** (0.23.13 installed; `copier` was considered and not chosen) (2026-10-31).
 8. **Submodules come from a one-time `setup.sh`, not the post hook** (2026-10-31). The brief had the hook run `git submodule add`; cargo-generate runs hooks in a temp dir and drops every `.git` directory when it moves the result, so that cannot work (details in [design.md](design.md), "Why setup.sh, not the hook"). The hook renders `setup.sh` with the URL and tag; the author runs it once after generating, and it deletes itself. Chosen over a wrapper script and a Makefile bootstrap.
 9. **The client protects core2's sensitive parts the way core2 does** (2026-10-31). The client's `.claude/settings.json` blocks core2's directories as core2's own settings do (`denyWrite` on `third-party/core2/src`, `tests`, `Makefile`, and `deny` rules for the edit tools), and its `CLAUDE.md` protects them as core2's `CLAUDE.md` does. Both keep the broader rule that nothing under `third-party/` is edited (decision 1).
+10. **`glfw_vulkan` uses the system Vulkan headers** (Arch: `vulkan-headers`), not a pinned `Vulkan-Headers` submodule (2026-10-31). The Makefile stops with an install hint when `vulkan/vulkan.h` is missing.
 
 ## Claude's choices (2026-10-31; the author may overrule)
 - The client's `CLAUDE.md` is stored as `template/CLAUDE.client.md` so it is not loaded as a nested `CLAUDE.md` while working on this repo; the hook renames it.
@@ -19,3 +20,6 @@ Made by the author unless noted. Carried over from the handoff brief written at 
 - The Makefile compiles every `src/**/*.cpp`, not only `main.cpp`, and guards the `core_modules` call instead of shipping a starter module.
 - `check.sh` checks the `core2_version` default from `cargo-generate.toml` (one source of truth); `CORE2_VERSION=...` overrides it to try a new tag.
 - The ImGui backend defaults to `sdl3_renderer`.
+- The `ncurses` variant prints through core2 when stdin or stdout is not a terminal, instead of failing in `initscr`; `check.sh` relies on it.
+- UI libraries' `pkg-config --cflags` stay out of `CXXFLAGS` (core2 is built with those), on the project's compile lines only.
+- `check.sh` runs the windowed variants on SDL's offscreen driver where that works, and only builds the others unless `WINDOWED=1`, so it never opens windows on the desktop by default.

@@ -12,15 +12,18 @@
 #   CORE2_VERSION  the tag to pin (default: core2_version's default in
 #                  template/cargo-generate.toml, which is what gets checked)
 #   KEEP=1         keep the temp dir after a pass (it is always kept after a failure)
+#   WINDOWED=1     also run the ImGui variants that need a real display
+#                  (sdl3_gpu, glfw_opengl3, glfw_vulkan) for 2 seconds each
 set -eu
 
 here=$(cd "$(dirname "$0")" && pwd)
 core2=${CORE2_DIR:-$HOME/code/cpp/core2}
 default_version=$(sed -n 's/^core2_version = .*default = "\([^"]*\)".*/\1/p' "$here/template/cargo-generate.toml")
 version=${CORE2_VERSION:-$default_version}
-all_variants="plain"
+all_variants="plain ncurses sdl3 imgui-sdl3_renderer imgui-sdl3_gpu imgui-glfw_opengl3 imgui-glfw_vulkan"
 variants=${*:-$all_variants}
 modes="debug release lto instrument"
+jobs=$(nproc 2>/dev/null || echo 4)
 
 # git refuses to clone a local path as a submodule unless this is allowed.
 export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=protocol.file.allow GIT_CONFIG_VALUE_0=always
@@ -34,12 +37,12 @@ fail() {
   exit 1
 }
 
-# run <what> <command...>: runs the command with its output in $log; on failure
-# shows the log and stops.
+# run <what> <command...>: runs the command with no input and its output in
+# $log; on failure shows the log and stops.
 run() {
   what=$1
   shift
-  if ! "$@" >"$log" 2>&1; then
+  if ! "$@" </dev/null >"$log" 2>&1; then
     cat "$log" >&2
     fail "$what"
   fi
@@ -49,7 +52,11 @@ check_variant() {
   v=$1
   backend=
   case $v in
-    plain) ui=plain ;;
+    plain | ncurses | sdl3) ui=$v ;;
+    imgui-sdl3_renderer | imgui-sdl3_gpu | imgui-glfw_opengl3 | imgui-glfw_vulkan)
+      ui=imgui
+      backend=${v#imgui-}
+      ;;
     *) fail "unknown variant $v (known: $all_variants)" ;;
   esac
   name=check-$(printf '%s' "$v" | tr '_' '-')
@@ -88,17 +95,53 @@ check_variant() {
 
   # Every mode, warning-free
   for m in $modes; do
-    run "$v: make MODE=$m" make -C "$dir" MODE="$m"
+    run "$v: make MODE=$m" make -C "$dir" -j"$jobs" MODE="$m"
     if grep -n 'warning:' "$log"; then
       fail "$v: make MODE=$m printed warnings"
     fi
     bin=$dir/build/${name}_$m
     [ -x "$bin" ] || fail "$v: $bin was not built"
     case $ui in
-      plain)
+      plain | ncurses)
+        # ncurses: no terminal here, so it prints through core2 instead
         run "$v: run $m" "$bin" one "two words"
-        grep -q ': 2 argument(s)$' "$log" && grep -q '^  2: two words$' "$log" ||
+        grep -q ': 2 argument(s)' "$log" && grep -q '^  2: two words$' "$log" ||
           { cat "$log" >&2; fail "$v: unexpected output from $bin"; }
+        if [ "$ui" = ncurses ] && command -v script >/dev/null; then
+          # and the curses screen, on a pseudo-terminal: a key press ends it
+          { sleep 1; printf x; } | TERM=xterm timeout 10 script -qec "'$bin' one 'two words'" /dev/null >"$log" 2>&1 ||
+            { cat "$log" >&2; fail "$v: $bin on a pseudo-terminal"; }
+          grep -q 'Press any key' "$log" && grep -q 'two words' "$log" ||
+            { cat "$log" >&2; fail "$v: unexpected screen from $bin"; }
+        fi
+        ;;
+      imgui)
+        # SDL_GPU, OpenGL and Vulkan need a surface that can present, which
+        # SDL's offscreen driver does not have: those are only built, unless
+        # WINDOWED=1 runs them on the real display.
+        if [ "$backend" = sdl3_renderer ]; then
+          headless=1
+        else
+          headless=
+        fi
+        if [ -n "$headless" ] || [ "${WINDOWED:-}" = 1 ]; then
+          rc=0
+          if [ -n "$headless" ]; then
+            (cd "$dir" && SDL_VIDEO_DRIVER=offscreen timeout 2 "$bin") </dev/null >"$log" 2>&1 || rc=$?
+          else
+            (cd "$dir" && timeout 2 "$bin") </dev/null >"$log" 2>&1 || rc=$?
+          fi
+          [ "$rc" = 124 ] || { cat "$log" >&2; fail "$v: $bin exited with $rc before 2 seconds"; }
+          grep -q 'to quit$' "$log" || { cat "$log" >&2; fail "$v: $bin did not get past its window setup"; }
+        fi
+        ;;
+      sdl3)
+        # SDL's offscreen video driver: no window on the desktop. The program
+        # runs until it is closed, so still running after 2 seconds passes.
+        rc=0
+        (cd "$dir" && SDL_VIDEO_DRIVER=offscreen timeout 2 "$bin") </dev/null >"$log" 2>&1 || rc=$?
+        [ "$rc" = 124 ] || { cat "$log" >&2; fail "$v: $bin exited with $rc before 2 seconds"; }
+        grep -q 'to quit$' "$log" || { cat "$log" >&2; fail "$v: $bin did not get past its window setup"; }
         ;;
     esac
     echo "   $m: ok"

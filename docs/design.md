@@ -18,7 +18,8 @@ core2-template/
     Makefile                    on core2's core.mk
     README.md                   the client's README
     docs/                       the client's docs (starts with a README)
-    ui/<variant>/main.cpp       one per UI; the hook moves the chosen one to src/
+    ui/<variant>/main.cpp       plain, ncurses, sdl3; the hook moves the chosen one to src/
+    ui/imgui/<backend>/main.cpp sdl3_renderer, sdl3_gpu, glfw_opengl3, glfw_vulkan
 ```
 
 ## Placeholders
@@ -62,17 +63,24 @@ Built on core2's `core.mk` (its header comment lists the inputs and outputs; cor
 ## UI variants
 Each `ui/<variant>/main.cpp` uses core2 (`import core;`, `console::println`, `os::args` from `main`'s `argc`/`argv`) in the style of core2's `docs/style.md`. C headers for ncurses, SDL3 and GLFW are fine. While curses owns the screen, nothing goes through `console::print`.
 
-| Variant | Libraries (pkg-config) | Installed here (2026-10-31) |
-|---|---|---|
-| `plain` | none | |
-| `ncurses` | `ncursesw` | 6.6 |
-| `sdl3` | `sdl3` | 3.4.18 |
-| `imgui` + `sdl3_renderer` | `sdl3`, ImGui | |
-| `imgui` + `sdl3_gpu` | `sdl3`, ImGui | |
-| `imgui` + `glfw_opengl3` | `glfw3`, `gl` | glfw3 3.5.1, gl 1.2 |
-| `imgui` + `glfw_vulkan` | `glfw3`, `vulkan` | vulkan 1.4.363 |
+| Variant | What `main.cpp` does | pkg-config packages | Installed here (2026-10-31) |
+|---|---|---|---|
+| `plain` | prints the arguments | none | |
+| `ncurses` | shows the arguments on a curses screen until a key; without a terminal on stdin and stdout, prints them through core2 instead | `ncursesw` | 6.6 |
+| `sdl3` | a window drawn with SDL_Renderer (a square moving back and forth) until Esc or close | `sdl3` | 3.4.18 |
+| `imgui` + `sdl3_renderer` | ImGui window listing the arguments, a demo-window toggle, a background color, the frame rate | `sdl3` | |
+| `imgui` + `sdl3_gpu` | the same, drawn with SDL_GPU | `sdl3` | |
+| `imgui` + `glfw_opengl3` | the same, GLFW and OpenGL 3 (`main.cpp` calls `glClear` and friends, hence `gl`) | `glfw3 gl` | glfw3 3.5.1, gl 1.2 |
+| `imgui` + `glfw_vulkan` | the same, GLFW and Vulkan, swapchain through ImGui's `ImGui_ImplVulkanH_*` helpers | `glfw3 vulkan`, plus the Vulkan headers | loader 1.4.363; headers not installed (2026-10-31) |
 
-ImGui and its backends are C++ that does not import core2: they are compiled with their own flags (no `-nostdinc++` needed), plus `-fno-threadsafe-statics` so they do not need `__cxa_guard_*` (checked with ImGui 1.92.8, per core2's README). They link without the C++ runtime; what each backend pulls in is checked when it is added. The old template pinned `Vulkan-Headers` for `glfw_vulkan`; whether the system headers suffice is checked then too.
+The ImGui variants follow Dear ImGui's own `examples/example_<backend>/main.cpp` (v1.92.8, MIT), rewritten in core2's style: errors go to `console::eprintln`, Vulkan errors stop through `trap::panic`, and the state the example keeps in globals is a struct on `main`'s stack (globals with constructors would trip `-Wglobal-constructors`).
+
+The UI libraries' compile flags (`pkg-config --cflags`) go on the project's own `.cpp` compile lines only, never into `CXXFLAGS`: core2 is built with `CXXFLAGS`, and `ncursesw` alone adds `-D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600`. The Makefile stops with a message when `pkg-config` cannot find the packages.
+
+ImGui and its backends are C++ that does not import core2. The Makefile compiles them with `CXXFLAGS` minus `-nostdinc++`, the warnings and `-I./src`, plus `-fno-threadsafe-statics` (no `__cxa_guard_*`) and `-I third-party/imgui`; the project's sources get `-isystem third-party/imgui`, so ImGui's headers raise no warnings there. All four backends link without the C++ runtime (checked 2026-10-31).
+
+### Vulkan headers
+The Vulkan loader's `vulkan.pc` (Arch: `vulkan-icd-loader`) brings no headers; they are a separate package (`vulkan-headers`), not installed here. With headers from Vulkan-Headers 1.4.350 on `CPATH`, `glfw_vulkan` builds warning-free in all four modes. The project uses the system package (decision 10), not a pinned `Vulkan-Headers` submodule as the old template did: the headers then match the loader `pkg-config` finds, and there is no third pin. The Makefile checks for `vulkan/vulkan.h` and stops with the package names when it is missing.
 
 The old template (`~/code/cpp/project-template`, for the earlier `cpp-core` library) had one Liquid `if/elsif` `main.cpp`; one file per variant lets clangd parse each one, and keeps Liquid away from C++ braces.
 
@@ -86,6 +94,12 @@ Mirrors core2's (core2's `docs/claude.md`, "In client projects"):
 - No tests in generated clients for now (decision 4).
 
 ## check.sh
-For each variant: `cargo generate --path . template` into a temp dir with `--silent` and every placeholder defined (`core2_url` is the local clone, so core2 needs no network; `core2_version` is not passed, so the default in `cargo-generate.toml` is what gets checked), then `setup.sh` (with `protocol.file.allow=always` in the environment, which git needs to clone a local path as a submodule), then sanity checks on the result (no leftover template files or Liquid tags, the JSON files parse, the hook's self-test passes from the submodule), then `make` in all four modes (any `warning:` fails the check) plus `make bear` (the database must have entries for `src/main.cpp` and for core2). The `plain` binary runs in every mode and its output is checked. How each other variant is exercised is decided when it is added; the windowed ones can at least be built.
+For each variant: `cargo generate --path . template` into a temp dir with `--silent` and every placeholder defined (`core2_url` is the local clone, so core2 needs no network; `core2_version` is not passed, so the default in `cargo-generate.toml` is what gets checked), then `setup.sh` (with `protocol.file.allow=always` in the environment, which git needs to clone a local path as a submodule), then sanity checks on the result (no leftover template files or Liquid tags, the JSON files parse, the hook's self-test passes from the submodule), then `make -j` in all four modes (any `warning:` fails the check) plus `make bear` (the database must have entries for `src/main.cpp` and for core2). Then, in every mode:
+- `plain`, and `ncurses` without a terminal: run with two arguments; the output is checked.
+- `ncurses` on a pseudo-terminal (`script`, when installed): the screen must show the arguments and the prompt; a key press ends it.
+- `sdl3` and `imgui` + `sdl3_renderer`: run for 2 seconds on SDL's `offscreen` video driver (no window on the desktop); they must still be running and have printed the line that follows their window setup.
+- `imgui` + `sdl3_gpu`, `glfw_opengl3`, `glfw_vulkan`: built only. They need a surface that can present, which the offscreen driver lacks (SDL_GPU fails with "This surface does not support presenting!"). `WINDOWED=1 ./check.sh` runs them for 2 seconds each on the real display.
+
+The binaries run in the project's directory, where ImGui writes `imgui.ini`. ImGui comes from GitHub over HTTPS (`setup.sh`), so the ImGui variants need the network.
 
 Checked by hand for `plain` (2026-10-31), not by `check.sh`: the comment-only hook, run from the submodule with the client as `CLAUDE_PROJECT_DIR`, blocks a code edit in `src/` and allows a comment; `make` without the submodule stops with the message; a project module (`src/greet.cppm`, imported by `main.cpp`) builds in all four modes and lands in `compile_commands.json`; editing a header under `src/` rebuilds `main.cpp`.
