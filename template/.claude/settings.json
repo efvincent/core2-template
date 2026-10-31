@@ -3,13 +3,20 @@
     "allow": ["Edit(/docs/**)", "Edit(/proposals/**)", "Edit(/README.md)",
               "Bash(make)", "Bash(make debug)", "Bash(make release)", "Bash(make lto)",
               "Bash(make instrument)", "Bash(make bear)"],
-    "deny": ["Edit(/third-party/**)"]
+    "deny": ["Edit(/third-party/**)",
+             "Edit(/third-party/core2/src/**)", "Edit(/third-party/core2/tests/**)",
+             "Edit(/third-party/core2/examples/**)", "Edit(/third-party/core2/Makefile)",
+             "Edit(/third-party/core2/core.mk)", "Edit(/third-party/core2/CLAUDE.md)",
+             "Edit(/third-party/core2/.claude/**)"]
   },
   "sandbox": {
     "enabled": true,
     "failIfUnavailable": true,
     "allowUnsandboxedCommands": false,
-    "filesystem": { "denyWrite": ["./src", "./Makefile", "./third-party"] }
+    "filesystem": {
+      "denyWrite": ["./src", "./Makefile", "./third-party",
+                    "./third-party/core2/src", "./third-party/core2/tests", "./third-party/core2/Makefile"]
+    }
   },
   "hooks": {
     "PreToolUse": [
