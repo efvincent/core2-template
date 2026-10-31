@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": ["Edit(/docs/**)", "Edit(/proposals/**)", "Edit(/README.md)",
+              "Bash(make)", "Bash(make debug)", "Bash(make release)", "Bash(make lto)",
+              "Bash(make instrument)", "Bash(make bear)"],
+    "deny": ["Edit(/third-party/**)"]
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "filesystem": { "denyWrite": ["./src", "./Makefile", "./third-party"] }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/third-party/core2/.claude/hooks/comment_only_guard.py"
+          }
+        ]
+      }
+    ]
+  }
+}

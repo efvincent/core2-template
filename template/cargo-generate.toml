@@ -1,0 +1,15 @@
+[template]
+cargo_generate_version = ">=0.23.0"
+# C++ sources have no placeholders, and `{{` is valid C++: copy them unrendered.
+exclude = ["ui/**"]
+
+[hooks]
+post = ["post.rhai"]
+
+[placeholders]
+core2_version = { type = "string", prompt = "core2 release tag to pin", default = "v0.13.1", regex = "^v[0-9]+\\.[0-9]+\\.[0-9]+$" }
+core2_url = { type = "string", prompt = "core2 repository URL", default = "git@github.com:efvincent/core2.git" }
+ui = { type = "string", prompt = "UI", choices = ["plain", "ncurses", "sdl3", "imgui"], default = "plain" }
+
+[conditional.'ui == "imgui"'.placeholders]
+imgui_backend = { type = "string", prompt = "ImGui backend", choices = ["sdl3_renderer", "sdl3_gpu", "glfw_opengl3", "glfw_vulkan"], default = "sdl3_renderer" }

@@ -1,0 +1,7 @@
+{
+  "makefile.configureOnOpen": false,
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "files.associations": {
+    "*.cppm": "cpp"
+  }
+}
