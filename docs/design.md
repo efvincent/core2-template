@@ -71,7 +71,7 @@ Each `ui/<variant>/main.cpp` uses core2 (`import core;`, `console::println`, `os
 | `imgui` + `sdl3_renderer` | ImGui window listing the arguments, a demo-window toggle, a background color, the frame rate | `sdl3` | |
 | `imgui` + `sdl3_gpu` | the same, drawn with SDL_GPU | `sdl3` | |
 | `imgui` + `glfw_opengl3` | the same, GLFW and OpenGL 3 (`main.cpp` calls `glClear` and friends, hence `gl`) | `glfw3 gl` | glfw3 3.5.1, gl 1.2 |
-| `imgui` + `glfw_vulkan` | the same, GLFW and Vulkan, swapchain through ImGui's `ImGui_ImplVulkanH_*` helpers | `glfw3 vulkan`, plus the Vulkan headers | loader 1.4.363; headers not installed (2026-10-31) |
+| `imgui` + `glfw_vulkan` | the same, GLFW and Vulkan, swapchain through ImGui's `ImGui_ImplVulkanH_*` helpers | `glfw3 vulkan`, plus the Vulkan headers | loader and headers 1.4.363 |
 
 The ImGui variants follow Dear ImGui's own `examples/example_<backend>/main.cpp` (v1.92.8, MIT), rewritten in core2's style: errors go to `console::eprintln`, Vulkan errors stop through `trap::panic`, and the state the example keeps in globals is a struct on `main`'s stack (globals with constructors would trip `-Wglobal-constructors`).
 
@@ -80,7 +80,7 @@ The UI libraries' compile flags (`pkg-config --cflags`) go on the project's own 
 ImGui and its backends are C++ that does not import core2. The Makefile compiles them with `CXXFLAGS` minus `-nostdinc++`, the warnings and `-I./src`, plus `-fno-threadsafe-statics` (no `__cxa_guard_*`) and `-I third-party/imgui`; the project's sources get `-isystem third-party/imgui`, so ImGui's headers raise no warnings there. All four backends link without the C++ runtime (checked 2026-10-31).
 
 ### Vulkan headers
-The Vulkan loader's `vulkan.pc` (Arch: `vulkan-icd-loader`) brings no headers; they are a separate package (`vulkan-headers`), not installed here. With headers from Vulkan-Headers 1.4.350 on `CPATH`, `glfw_vulkan` builds warning-free in all four modes. The project uses the system package (decision 10), not a pinned `Vulkan-Headers` submodule as the old template did: the headers then match the loader `pkg-config` finds, and there is no third pin. The Makefile checks for `vulkan/vulkan.h` and stops with the package names when it is missing.
+The Vulkan loader's `vulkan.pc` (Arch: `vulkan-icd-loader`) brings no headers; they are a separate package (`vulkan-headers`). `glfw_vulkan` builds warning-free in all four modes with Vulkan-Headers 1.4.350 (first, through `CPATH`) and with the system's 1.4.363. The project uses the system package (decision 10), not a pinned `Vulkan-Headers` submodule as the old template did: the headers then match the loader `pkg-config` finds, and there is no third pin. The Makefile checks for `vulkan/vulkan.h` and stops with the package names when it is missing.
 
 The old template (`~/code/cpp/project-template`, for the earlier `cpp-core` library) had one Liquid `if/elsif` `main.cpp`; one file per variant lets clangd parse each one, and keeps Liquid away from C++ braces.
 

@@ -158,6 +158,14 @@ assert any("third-party/core2/src/" in f for f in files), "no entries for core2"
   echo "   bear: ok"
 }
 
+# Every name first, so a typo stops the run before anything is built.
+for v in $variants; do
+  case " $all_variants " in
+    *" $v "*) ;;
+    *) fail "unknown variant $v (known: $all_variants)" ;;
+  esac
+done
+
 for v in $variants; do
   check_variant "$v"
 done

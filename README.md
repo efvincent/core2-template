@@ -38,7 +38,7 @@ All variants: `clang++` with C++26 modules (checked with clang 23), GNU make 4.2
 
 Dear ImGui itself comes in as a submodule; it needs network access to GitHub (HTTPS) during `setup.sh`.
 
-Status: every variant generates and builds; `glfw_vulkan` needs the Vulkan headers installed (`vulkan-headers` on Arch) ([docs/todo.md](docs/todo.md)).
+Status: every variant generates, builds in every mode, and passes `./check.sh` ([docs/todo.md](docs/todo.md)).
 
 ## Working on the template
 - [docs/design.md](docs/design.md): how it works, and why.
