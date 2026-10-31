@@ -13,7 +13,7 @@
 #                  template/cargo-generate.toml, which is what gets checked)
 #   KEEP=1         keep the temp dir after a pass (it is always kept after a failure)
 #   WINDOWED=1     also run the ImGui variants that need a real display
-#                  (sdl3_gpu, glfw_opengl3, glfw_vulkan) for 2 seconds each
+#                  (sdl3_gpu, glfw_opengl3, glfw_vulkan), as run_window does
 set -eu
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -46,6 +46,41 @@ run() {
     cat "$log" >&2
     fail "$what"
   fi
+}
+
+# run_window [VAR=value...] <bin>: starts a windowed program (it runs until its
+# window is closed) in the project's directory, where ImGui writes imgui.ini.
+# Waits up to WINDOW_WAIT seconds for the line it prints once its window is set
+# up, lets it draw for one more second, then stops it. Fails if it exits on its
+# own or never prints the line. Setup can take seconds: under the sanitizers,
+# loading the Vulkan drivers is slow.
+WINDOW_WAIT=20
+run_window() {
+  (cd "$dir" && exec env "$@") </dev/null >"$log" 2>&1 &
+  pid=$!
+  tenths=0
+  while kill -0 "$pid" 2>/dev/null && ! grep -q 'to quit$' "$log"; do
+    if [ "$tenths" -ge $((WINDOW_WAIT * 10)) ]; then
+      kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null || true
+      cat "$log" >&2
+      fail "$v: $bin did not get past its window setup in $WINDOW_WAIT seconds"
+    fi
+    sleep 0.1
+    tenths=$((tenths + 1))
+  done
+  if ! kill -0 "$pid" 2>/dev/null; then
+    rc=0; wait "$pid" || rc=$?
+    cat "$log" >&2
+    fail "$v: $bin exited on its own (status $rc)"
+  fi
+  sleep 1
+  if ! kill -0 "$pid" 2>/dev/null; then
+    rc=0; wait "$pid" || rc=$?
+    cat "$log" >&2
+    fail "$v: $bin exited on its own after its window setup (status $rc)"
+  fi
+  kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null || true
+  window_note=" (window up after $((tenths / 10)).$((tenths % 10))s)"
 }
 
 check_variant() {
@@ -115,36 +150,23 @@ check_variant() {
             { cat "$log" >&2; fail "$v: unexpected screen from $bin"; }
         fi
         ;;
+      sdl3)
+        # SDL's offscreen video driver: no window on the desktop.
+        run_window SDL_VIDEO_DRIVER=offscreen "$bin"
+        ;;
       imgui)
         # SDL_GPU, OpenGL and Vulkan need a surface that can present, which
         # SDL's offscreen driver does not have: those are only built, unless
         # WINDOWED=1 runs them on the real display.
         if [ "$backend" = sdl3_renderer ]; then
-          headless=1
-        else
-          headless=
+          run_window SDL_VIDEO_DRIVER=offscreen "$bin"
+        elif [ "${WINDOWED:-}" = 1 ]; then
+          run_window "$bin"
         fi
-        if [ -n "$headless" ] || [ "${WINDOWED:-}" = 1 ]; then
-          rc=0
-          if [ -n "$headless" ]; then
-            (cd "$dir" && SDL_VIDEO_DRIVER=offscreen timeout 2 "$bin") </dev/null >"$log" 2>&1 || rc=$?
-          else
-            (cd "$dir" && timeout 2 "$bin") </dev/null >"$log" 2>&1 || rc=$?
-          fi
-          [ "$rc" = 124 ] || { cat "$log" >&2; fail "$v: $bin exited with $rc before 2 seconds"; }
-          grep -q 'to quit$' "$log" || { cat "$log" >&2; fail "$v: $bin did not get past its window setup"; }
-        fi
-        ;;
-      sdl3)
-        # SDL's offscreen video driver: no window on the desktop. The program
-        # runs until it is closed, so still running after 2 seconds passes.
-        rc=0
-        (cd "$dir" && SDL_VIDEO_DRIVER=offscreen timeout 2 "$bin") </dev/null >"$log" 2>&1 || rc=$?
-        [ "$rc" = 124 ] || { cat "$log" >&2; fail "$v: $bin exited with $rc before 2 seconds"; }
-        grep -q 'to quit$' "$log" || { cat "$log" >&2; fail "$v: $bin did not get past its window setup"; }
         ;;
     esac
-    echo "   $m: ok"
+    echo "   $m: ok${window_note:-}"
+    window_note=
   done
 
   run "$v: make bear" make -C "$dir" bear

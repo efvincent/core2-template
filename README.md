@@ -43,4 +43,4 @@ Status: every variant generates, builds in every mode, and passes `./check.sh` (
 ## Working on the template
 - [docs/design.md](docs/design.md): how it works, and why.
 - [docs/decisions.md](docs/decisions.md): the decisions, with dates.
-- `./check.sh` generates every variant into a temp dir, builds each in every mode, and runs the ones that can run headless (`WINDOWED=1` also runs the rest on the real display, for 2 seconds each). It uses the core2 clone at `~/code/cpp/core2` (`CORE2_DIR` overrides it) and the default tag from `template/cargo-generate.toml` (`CORE2_VERSION` overrides it).
+- `./check.sh` generates every variant into a temp dir, builds each in every mode, and runs the ones that can run headless (`WINDOWED=1` also runs the rest on the real display, about a second each once their window is up). It uses the core2 clone at `~/code/cpp/core2` (`CORE2_DIR` overrides it) and the default tag from `template/cargo-generate.toml` (`CORE2_VERSION` overrides it).
