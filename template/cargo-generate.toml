@@ -7,7 +7,7 @@ exclude = ["ui/**"]
 post = ["post.rhai"]
 
 [placeholders]
-core2_version = { type = "string", prompt = "core2 release tag to pin", default = "v0.13.1", regex = "^v[0-9]+\\.[0-9]+\\.[0-9]+$" }
+core2_version = { type = "string", prompt = "core2 release tag to pin", default = "v0.14.0", regex = "^v[0-9]+\\.[0-9]+\\.[0-9]+$" }
 core2_url = { type = "string", prompt = "core2 repository URL", default = "git@github.com:efvincent/core2.git" }
 ui = { type = "string", prompt = "UI", choices = ["plain", "ncurses", "sdl3", "imgui"], default = "plain" }
 

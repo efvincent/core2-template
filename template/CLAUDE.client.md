@@ -9,17 +9,18 @@
 - Claude writes `docs/` and `README.md`.
 
 ## third-party/: nobody edits it
+- These rules apply to sessions started at this project's root. A session started in `third-party/core2` is a core2 session: core2's `CLAUDE.md`, settings and hook govern it, and it follows core2's `docs/workflow.md` ("Working from a client's submodule"). This project commits the pin only at a core2 release tag, never at a branch commit.
 - `third-party/core2` is core2, a git submodule pinned to a release tag{% if ui == "imgui" %}; `third-party/imgui` is Dear ImGui, pinned the same way{% endif %}. Never edit files there, not even comments.
 - A change needed in core2 goes through core2's own repo and gate (branch, tests, review, release, tag). Say what is needed; don't work around it here.
 
 ## core2's code (`third-party/core2`): never, and no grant opens it
 core2 protects these in its own repo, and they stay protected here:
 - `third-party/core2/src/`, `examples/`, `Makefile` and `core.mk`: the author's code in core2. Never write or modify them, not even comments or Doxygen. A grant to change code in this project never covers them.
-- `third-party/core2/tests/`: Claude writes tests only in core2's own repo, under core2's rules, never through this checkout.
+- `third-party/core2/tests/`: Claude writes tests only in a core2 session (started in `third-party/core2`, or a standalone clone), under core2's rules, never from a session of this project.
 - `third-party/core2/CLAUDE.md`, `docs/style.md` and `.claude/` (the settings and the comment-only hook this project runs): core2's working agreement, style and guard. Read them; never change them from here.
 - A bug spotted in core2 is reported, with where it is; it is not fixed here and not worked around in `src/`. A fix happens in core2's repo, and then this project bumps its pin.
 - `.claude/settings.json` enforces this: `deny` for the edit tools on all of `third-party/`, with core2's protected paths listed by name, and `denyWrite` for Bash on `./third-party`, plus core2's own three (`src`, `tests`, `Makefile`) by name.
-- Then I bump the pin: `git -C third-party/core2 fetch --tags && git -C third-party/core2 checkout vX.Y.Z && git add third-party/core2`, and rebuild.
+- Then I bump the pin: `git -C third-party/core2 fetch --tags && git -C third-party/core2 checkout vX.Y.Z && git add third-party/core2`, rebuild, and commit it as `chore(deps): core2 vX.Y.Z`. How a core2 fix found here goes through core2: `docs/core2.md`.
 - If `third-party/core2` is empty, the comment-only hook (which lives there) blocks every Edit and Write, and `make` stops. Tell me to run `git submodule update --init`.
 
 ## Code style

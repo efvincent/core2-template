@@ -15,7 +15,7 @@ From a local clone: `cargo generate --path ~/code/cpp/core2-template template --
 cargo-generate asks for:
 | Question | Choices | Default |
 |---|---|---|
-| core2 release tag to pin | `vX.Y.Z` (`v0.13.1` or later) | the latest tag this template was checked with |
+| core2 release tag to pin | `vX.Y.Z` (`v0.14.0` or later) | the latest tag this template was checked with |
 | core2 repository URL | | `git@github.com:efvincent/core2.git` |
 | UI | `plain`, `ncurses`, `sdl3`, `imgui` | `plain` |
 | ImGui backend (only for `imgui`) | `sdl3_renderer`, `sdl3_gpu`, `glfw_opengl3`, `glfw_vulkan` | `sdl3_renderer` |

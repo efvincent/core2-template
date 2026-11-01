@@ -16,6 +16,8 @@ The order of work from the handoff brief, with status (2026-10-31).
    - `docs/todo.md`: the "Resume here: `core2-template`" and "Then: `core2-template`" items, which point at the brief.
    - `docs/claude.md`, "In client projects": could add that the client's settings also block core2's own protected paths by name (decision 9).
    - Docs only, so no version bump or tag under core2's rules, unless the author wants one.
+6. [x] Align with core2 `v0.14.0` and decision 11 (2026-11-01): default tag `v0.14.0`; the client's `CLAUDE.md` scopes its `third-party/` rules and points at core2's submodule workflow; `setup.sh` writes core2's `.claude/settings.local.json`; the client's `docs/core2.md` describes fixing core2 from the submodule; `check.sh` checks the settings file and that the submodule stays clean.
+   - [ ] Generated clients made before this (c2app1) get the scope line by hand (done in c2app1) and the settings file from the command in `docs/core2.md`.
 
 ## Open questions
 None.

@@ -38,4 +38,4 @@ Dear ImGui (`third-party/imgui`, pinned to `v1.92.8`) is compiled by the Makefil
 VS Code with clangd and CodeLLDB: run `make bear` once (and again when files are added or removed), then F5 builds and debugs `build/{{project-name}}_debug`.
 
 ## core2
-core2 is a git submodule at `third-party/core2`, pinned to a release tag. How to bump it, and how a core2 change gets here: [docs/core2.md](docs/core2.md).
+core2 is a git submodule at `third-party/core2`, pinned to a release tag. How to bump it, and how to fix core2 from here (a core2 session in `third-party/core2`, through core2's own gate): [docs/core2.md](docs/core2.md).

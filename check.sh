@@ -131,6 +131,14 @@ check_variant() {
   done
   [ -f "$dir/third-party/core2/docs/style.md" ] || fail "$v: third-party/core2/docs/style.md (imported by CLAUDE.md) is missing"
   run "$v: comment-only hook self-test" python3 "$dir/third-party/core2/.claude/hooks/comment_only_guard.py" --selftest
+  gitdir=$(git -C "$dir/third-party/core2" rev-parse --absolute-git-dir)
+  run "$v: third-party/core2/.claude/settings.local.json" python3 -c '
+import json, sys
+fs = json.load(open(sys.argv[1]))["sandbox"]["filesystem"]
+g = sys.argv[2]
+assert fs == { "allowWrite": [g], "denyWrite": [g + "/hooks", g + "/config"] }, fs
+' "$dir/third-party/core2/.claude/settings.local.json" "$gitdir"
+  [ -z "$(git -C "$dir/third-party/core2" status --porcelain)" ] || fail "$v: third-party/core2 has changes (settings.local.json not ignored?)"
 
   # Every mode, warning-free
   for m in $modes; do
