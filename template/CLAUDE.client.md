@@ -53,5 +53,5 @@ In this project, modules use `{{project-name | snake_case}}::<name>` namespaces 
 ## Git
 - Feature branches (`feature/<topic>`, `fix/<topic>`, `docs/<topic>`, `chore/<topic>`), Conventional Commits, local commits when I say go.
 - Stage named files only, never `git add -A`. No Co-Authored-By line.
-- Claude does not push: the sandbox blocks `github.com:22`. I push and merge.
+- Claude does not push. I push and merge.
 - The sandbox mounts `/dev/null` over `.bashrc`, `.zshrc`, `.idea` and similar paths, so they can show up as untracked in Claude's `git status`. Ignore them.

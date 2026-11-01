@@ -7,8 +7,9 @@
 #   ./check.sh plain ...     only these
 #
 # Environment:
-#   CORE2_DIR      the core2 clone to use as core2_url (default ~/code/cpp/core2);
-#                  a local clone, so core2 needs no network
+#   CORE2_DIR      a local core2 clone to use as core2_url, for an offline run or
+#                  a tag not pushed yet (default: none, so core2 comes from
+#                  core2_url's default in template/cargo-generate.toml, over SSH)
 #   CORE2_VERSION  the tag to pin (default: core2_version's default in
 #                  template/cargo-generate.toml, which is what gets checked)
 #   KEEP=1         keep the temp dir after a pass (it is always kept after a failure)
@@ -17,7 +18,8 @@
 set -eu
 
 here=$(cd "$(dirname "$0")" && pwd)
-core2=${CORE2_DIR:-$HOME/code/cpp/core2}
+default_url=$(sed -n 's/^core2_url = .*default = "\([^"]*\)".*/\1/p' "$here/template/cargo-generate.toml")
+core2=${CORE2_DIR:-$default_url}
 default_version=$(sed -n 's/^core2_version = .*default = "\([^"]*\)".*/\1/p' "$here/template/cargo-generate.toml")
 version=${CORE2_VERSION:-$default_version}
 all_variants="plain ncurses sdl3 imgui-sdl3_renderer imgui-sdl3_gpu imgui-glfw_opengl3 imgui-glfw_vulkan"
@@ -26,7 +28,9 @@ modes="debug release lto instrument"
 jobs=$(nproc 2>/dev/null || echo 4)
 
 # git refuses to clone a local path as a submodule unless this is allowed.
-export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=protocol.file.allow GIT_CONFIG_VALUE_0=always
+if [ -n "${CORE2_DIR:-}" ]; then
+  export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=protocol.file.allow GIT_CONFIG_VALUE_0=always
+fi
 
 out=$(mktemp -d "${TMPDIR:-/tmp}/core2-template-check.XXXXXX")
 log=$out/log

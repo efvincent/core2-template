@@ -16,9 +16,9 @@ Short version:
 - One plain C++ file per UI variant, excluded from Liquid rendering (`{{` is valid C++).
 
 ## Checking
-- `./check.sh` generates every variant into a temp dir, runs its `setup.sh` against the local core2 clone (offline for core2; ImGui comes from GitHub over HTTPS), builds every mode, and runs the binaries. Run it after any change to `template/` or `check.sh`, and report the output.
+- `./check.sh` generates every variant into a temp dir, runs its `setup.sh` (core2 from `core2_url`'s default, `git@github.com:efvincent/core2.git`; ImGui from GitHub over HTTPS), builds every mode, and runs the binaries. Run it after any change to `template/` or `check.sh`, and report the output.
 - `CORE2_VERSION=vX.Y.Z ./check.sh` checks a newer core2 tag. When it passes, bump the default of `core2_version` in `template/cargo-generate.toml` (and the facts in `docs/`).
-- The sandbox blocks `github.com:22`, so Claude cannot generate from the SSH URL; `check.sh` passes `core2_url=$HOME/code/cpp/core2`.
+- `CORE2_DIR=~/code/cpp/core2 ./check.sh` uses the local core2 clone instead: offline for core2, and the way to check a tag that is not pushed yet.
 
 ## Changes to core2
 Never edit `~/code/cpp/core2` from here. If the template needs a core2 change, say so and describe it; it goes through core2's own session and gate (branch, tests, review, release, tag).
@@ -30,4 +30,4 @@ Never edit `~/code/cpp/core2` from here. If the template needs a core2 change, s
 ## Git
 - Feature branches (`feature/<topic>`, `fix/<topic>`, `docs/<topic>`, `chore/<topic>`), Conventional Commits, local commits when the author says go. Stage named files, never `git add -A`.
 - No `Co-Authored-By` line, as in core2.
-- Claude does not push (the sandbox blocks `github.com:22`); the author pushes and merges.
+- Claude pushes, deletes remote branches or opens PRs only when the author asks; otherwise the author pushes and merges.

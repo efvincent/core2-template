@@ -27,7 +27,7 @@ core2-template/
 |---|---|---|---|
 | `project-name` | kebab-case | (asked) | cargo-generate's built-in. Names the binary `build/<project-name>_<mode>`. |
 | `core2_version` | `vX.Y.Z` | `v0.13.1` | The core2 tag to pin. The default is the tag `check.sh` last passed with; `v0.13.1` is the oldest that works (it ships `docs/style.md` and the hook). |
-| `core2_url` | git URL or path | `git@github.com:efvincent/core2.git` | Private repo, so SSH. `check.sh` passes a local clone. |
+| `core2_url` | git URL or path | `git@github.com:efvincent/core2.git` | Private repo, so SSH. `check.sh` uses it too, unless `CORE2_DIR` names a local clone. |
 | `ui` | `plain`, `ncurses`, `sdl3`, `imgui` | `plain` | |
 | `imgui_backend` | `sdl3_renderer`, `sdl3_gpu`, `glfw_opengl3`, `glfw_vulkan` | `sdl3_renderer` | Asked only when `ui == "imgui"` (`[conditional.'ui == "imgui"'.placeholders]`). |
 
@@ -94,7 +94,7 @@ Mirrors core2's (core2's `docs/claude.md`, "In client projects"):
 - No tests in generated clients for now (decision 4).
 
 ## check.sh
-For each variant: `cargo generate --path . template` into a temp dir with `--silent` and every placeholder defined (`core2_url` is the local clone, so core2 needs no network; `core2_version` is not passed, so the default in `cargo-generate.toml` is what gets checked), then `setup.sh` (with `protocol.file.allow=always` in the environment, which git needs to clone a local path as a submodule), then sanity checks on the result (no leftover template files or Liquid tags, the JSON files parse, the hook's self-test passes from the submodule), then `make -j` in all four modes (any `warning:` fails the check) plus `make bear` (the database must have entries for `src/main.cpp` and for core2). Then, in every mode:
+For each variant: `cargo generate --path . template` into a temp dir with `--silent` and every placeholder defined (`core2_url` and `core2_version` are the defaults read from `cargo-generate.toml`, so what users get is what gets checked; `CORE2_DIR` swaps in a local clone, and `CORE2_VERSION` another tag), then `setup.sh` (with a local clone, also `protocol.file.allow=always` in the environment, which git needs to clone a local path as a submodule), then sanity checks on the result (no leftover template files or Liquid tags, the JSON files parse, the hook's self-test passes from the submodule), then `make -j` in all four modes (any `warning:` fails the check) plus `make bear` (the database must have entries for `src/main.cpp` and for core2). Then, in every mode:
 - `plain`, and `ncurses` without a terminal: run with two arguments; the output is checked.
 - `ncurses` on a pseudo-terminal (`script`, when installed): the screen must show the arguments and the prompt; a key press ends it.
 - `sdl3` and `imgui` + `sdl3_renderer`: run on SDL's `offscreen` video driver (no window on the desktop). `check.sh` waits up to 20 seconds for the line each prints once its window is set up, lets it draw for one more second, then stops it; exiting on its own, or no line in time, fails. It reports how long setup took. It replaced a fixed 2-second limit, which `glfw_vulkan`'s instrument build missed on the author's desktop: under the sanitizers its window is up after 2.6 seconds, against 0.3 in the other modes (2026-10-31), most likely the Vulkan loader loading this machine's three drivers (Intel, Intel hasvk, NVIDIA).
