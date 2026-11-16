@@ -45,4 +45,4 @@ with open(sys.argv[2], "w") as f:
 fi
 
 rm -f setup.sh
-echo "Done. Build with: make"
+echo "Done. Build with: cmake --preset debug && cmake --build --preset debug"

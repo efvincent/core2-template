@@ -3,7 +3,7 @@
 core2 is a git submodule at `third-party/core2`, from `{{core2_url}}`, pinned to a release tag (`{{core2_version}}` when the project was generated). The pin is the commit the superproject records for `third-party/core2` (`git submodule status` shows it).
 
 ## What comes from the pin
-- The library itself, built from source by `third-party/core2/core.mk` with this project's flags.
+- The library itself, built from source inside this project's build: `CMakeLists.txt` adds it with `add_subdirectory(third-party/core2)` and links the target `core2::core2` (core2 is CMake only since `v2.0.0`).
 - The code style: `CLAUDE.md` imports `@third-party/core2/docs/style.md`.
 - Claude Code's comment-only hook: `.claude/settings.json` runs `third-party/core2/.claude/hooks/comment_only_guard.py`.
 
@@ -14,10 +14,20 @@ Bumping the pin updates all three.
 git -C third-party/core2 fetch --tags
 git -C third-party/core2 checkout vX.Y.Z
 git add third-party/core2
-make
+cmake --build --preset debug
+git commit -m "chore(deps): core2 vX.Y.Z"
 ```
-core2's modules depend on their sources, so `make` rebuilds the ones that changed.
-Then commit (`chore(deps): core2 vX.Y.Z`). core2's `CHANGELOG.md` lists what changed; a minor bump before 1.0 can break the API.
+CMake rebuilds the core2 modules that changed, and everything that imports them. core2's `CHANGELOG.md` lists what changed; since `1.0.0`, a breaking change bumps core2's major version.
+
+The author runs the fetch and the checkout. From Claude's sandbox they fail halfway: the fetch needs `github.com:22`, and the checkout moves the submodule's `HEAD` and index (in `.git/modules/`) but cannot write the files under `./third-party`, which leaves a submodule that looks heavily modified. Claude checks the result: `git -C third-party/core2 status --short` (empty) and `git -C third-party/core2 describe --tags` (the new tag).
+
+If the checkout stops with "Your local changes to the following files would be overwritten", someone left edits inside `third-party/core2`. Don't discard them unread: look with `git -C third-party/core2 diff`, keep them with `git -C third-party/core2 stash push -m "<what they are>"`, and take them to core2's own repository.
+
+## Flags and core2
+- `core2::core2` sets core2's required flags for every file that imports it: C++26, `-fno-exceptions -fno-rtti -nostdinc++`, and `-nostdlib++` at link time. Don't repeat them in `CMakeLists.txt`.
+- This project compiles as `gnu++26`, CMake's default, which core2 allows (core2's `docs/decisions.md`, D43). Clang rejects a `c++26` module in a `gnu++26` file, so CMake compiles core2's module interfaces a second time with this project's flags (24 extra compiles per build directory). `set(CMAKE_CXX_EXTENSIONS OFF)` after `project()` skips them.
+- `-DNDEBUG` comes only from the build type, set by the presets in `CMAKE_CXX_FLAGS_<CONFIG>` and shared with core2. Never add it to this project's target alone: the project would then see core2's interfaces with `NDEBUG` while linking core2's code built without it, and core2's debug checks (`trap::IS_DEBUG`, `span::OOR_*`) would disagree between the two.
+- That mismatch is a link error, not a silent one (D44): every target that links `core2::core2` compiles core2's `cmake/mode_check.cpp` with its own flags, which refers to `core2_built_with_NDEBUG` or `core2_built_without_NDEBUG`, and the library defines only the one for its own `NDEBUG`. An undefined reference to either name means a target set `NDEBUG` on its own.
 
 ## Changing core2
 Nothing under `third-party/` is edited from a session of this project. A change this project needs is made in core2, through core2's gate (branch, tests, review, release, tag); then this project bumps its pin. Other projects stay on their own pins until they bump.
@@ -25,7 +35,7 @@ Nothing under `third-party/` is edited from a session of this project. A change 
 The fix can be made right here, in the submodule, as core2 work. core2's `docs/workflow.md`, "Working from a client's submodule", has the full flow. In short:
 1. Start Claude Code in `third-party/core2`, not at this project's root. That is a core2 session: core2's `CLAUDE.md`, settings and hook apply. This project's `CLAUDE.md` is still loaded (it is in a parent directory), and it says its `third-party/` rules do not apply there.
 2. Branch from core2's `main`: `git fetch origin && git switch -c fix/<topic> origin/main` (in `third-party/core2`). Edits made at the tag come along.
-3. Work as in core2. This project's `make` builds core2 from the submodule's working tree, so a fix can be tried here before it is committed.
+3. Work as in core2. This project's build compiles core2 from the submodule's working tree, so `cmake --build --preset debug` here picks up an edit there right away, before it is committed. After adding, renaming or removing a core2 file, build here and restart clangd: the editor reads this project's `compile_commands.json`, not core2's.
 4. Commit, review, push, PR, merge and tag in core2. Then, in `third-party/core2`, `git switch main && git pull && git checkout vX.Y.Z`, and bump the pin as above.
 
 Until step 4, this project's `git status` shows `third-party/core2` as modified. Do not stage it before the tag.
@@ -45,7 +55,7 @@ with open(sys.argv[2], "w") as f:
 The git directory's `hooks/` and `config` stay denied: git runs and reads them outside the sandbox. A running session picks the file up without a restart.
 
 ## A missing submodule
-After `git clone` without `--recurse-submodules`, `third-party/core2` is empty: `make` stops with a message, and the comment-only hook blocks every Claude Code edit. Fix:
+After `git clone` without `--recurse-submodules`, `third-party/core2` is empty: CMake stops with a message, and the comment-only hook blocks every Claude Code edit. Fix:
 ```sh
 git submodule update --init
 ```

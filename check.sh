@@ -1,7 +1,9 @@
 #!/bin/sh
 # Generates each variant of the template into a temp dir, runs its setup.sh,
-# checks the result, builds it in every mode (warnings fail the check) plus
-# `make bear`, and runs the binaries that can run headless.
+# checks the result, configures and builds every CMake preset (warnings fail
+# the check), checks the debug preset's compile_commands.json, builds the
+# Doxygen reference (when doxygen is installed), and runs the binaries that
+# can run headless.
 #
 #   ./check.sh               every variant
 #   ./check.sh plain ...     only these
@@ -25,7 +27,6 @@ version=${CORE2_VERSION:-$default_version}
 all_variants="plain ncurses sdl3 imgui-sdl3_renderer imgui-sdl3_gpu imgui-glfw_opengl3 imgui-glfw_vulkan"
 variants=${*:-$all_variants}
 modes="debug release lto instrument"
-jobs=$(nproc 2>/dev/null || echo 4)
 
 # git refuses to clone a local path as a submodule unless this is allowed.
 if [ -n "${CORE2_DIR:-}" ]; then
@@ -112,7 +113,7 @@ check_variant() {
   for f in setup.sh post.rhai CLAUDE.client.md cargo-generate.toml ui; do
     [ ! -e "$dir/$f" ] || fail "$v: $f is left over"
   done
-  for f in CLAUDE.md README.md Makefile .gitignore docs/core2.md src/main.cpp \
+  for f in CLAUDE.md README.md CMakeLists.txt CMakePresets.json .gitignore docs/core2.md docs/Doxyfile src/main.cpp \
            .claude/settings.json .vscode/settings.json .vscode/launch.json .vscode/tasks.json; do
     [ -f "$dir/$f" ] || fail "$v: $f is missing"
   done
@@ -120,7 +121,7 @@ check_variant() {
     fail "$v: unrendered Liquid tags"
   fi
   run "$v: JSON files" python3 -c 'import json, sys; [json.load(open(p)) for p in sys.argv[1:]]' \
-    "$dir/.claude/settings.json" "$dir/.vscode/settings.json" "$dir/.vscode/launch.json" "$dir/.vscode/tasks.json"
+    "$dir/CMakePresets.json" "$dir/.claude/settings.json" "$dir/.vscode/settings.json" "$dir/.vscode/launch.json" "$dir/.vscode/tasks.json"
 
   # The submodule, its pin, and what CLAUDE.md and the settings take from it
   pinned=$(git -C "$dir/third-party/core2" describe --tags --exact-match 2>/dev/null || true)
@@ -140,13 +141,28 @@ assert fs == { "allowWrite": [g], "denyWrite": [g + "/hooks", g + "/config"] }, 
 ' "$dir/third-party/core2/.claude/settings.local.json" "$gitdir"
   [ -z "$(git -C "$dir/third-party/core2" status --porcelain)" ] || fail "$v: third-party/core2 has changes (settings.local.json not ignored?)"
 
-  # Every mode, warning-free
+  # Without the submodule, configuring stops with the fix in the message.
+  bare=$out/$name-no-submodule
+  mkdir "$bare"
+  cp -R "$dir/CMakeLists.txt" "$dir/CMakePresets.json" "$dir/src" "$bare/"
+  if (cd "$bare" && cmake --preset debug) </dev/null >"$log" 2>&1; then
+    fail "$v: cmake --preset debug without third-party/core2 succeeded"
+  fi
+  grep -q 'git submodule update --init' "$log" ||
+    { cat "$log" >&2; fail "$v: no submodule message from cmake without third-party/core2"; }
+  rm -rf "$bare"
+
+  # Every preset, warning-free (the compiler's and CMake's)
   for m in $modes; do
-    run "$v: make MODE=$m" make -C "$dir" -j"$jobs" MODE="$m"
-    if grep -n 'warning:' "$log"; then
-      fail "$v: make MODE=$m printed warnings"
+    run "$v: cmake --preset $m" sh -c 'cd "$1" && cmake --preset "$2"' sh "$dir" "$m"
+    if grep -n -e 'warning:' -e 'CMake Warning' "$log"; then
+      fail "$v: cmake --preset $m printed warnings"
     fi
-    bin=$dir/build/${name}_$m
+    run "$v: cmake --build --preset $m" sh -c 'cd "$1" && cmake --build --preset "$2"' sh "$dir" "$m"
+    if grep -n -e 'warning:' -e 'CMake Warning' "$log"; then
+      fail "$v: cmake --build --preset $m printed warnings"
+    fi
+    bin=$dir/build/cmake/$m/$name
     [ -x "$bin" ] || fail "$v: $bin was not built"
     case $ui in
       plain | ncurses)
@@ -181,15 +197,28 @@ assert fs == { "allowWrite": [g], "denyWrite": [g + "/hooks", g + "/config"] }, 
     window_note=
   done
 
-  run "$v: make bear" make -C "$dir" bear
   run "$v: compile_commands.json" python3 -c '
 import json, sys
 db = json.load(open(sys.argv[1]))
 files = [e["file"] for e in db]
 assert any(f.endswith("src/main.cpp") for f in files), "no entry for src/main.cpp"
 assert any("third-party/core2/src/" in f for f in files), "no entries for core2"
-' "$dir/compile_commands.json"
-  echo "   bear: ok"
+' "$dir/build/cmake/debug/compile_commands.json"
+  echo "   compile_commands.json: ok"
+
+  # The reference: warning-free (the Doxyfile makes warnings fatal), git-ignored
+  if command -v doxygen >/dev/null; then
+    run "$v: docs target" sh -c 'cd "$1" && cmake --build --preset debug --target docs' sh "$dir"
+    if grep -n -e 'warning:' -e 'error:' "$log"; then
+      fail "$v: the docs target printed warnings"
+    fi
+    [ -f "$dir/docs/html/index.html" ] || fail "$v: docs/html/index.html was not built"
+    git -C "$dir" check-ignore -q docs/html || fail "$v: docs/html is not git-ignored"
+    echo "   docs: ok"
+  else
+    echo "   docs: skipped (no doxygen)"
+  fi
+  [ -z "$(git -C "$dir/third-party/core2" status --porcelain)" ] || fail "$v: third-party/core2 has changes after the builds"
 }
 
 # Every name first, so a typo stops the run before anything is built.

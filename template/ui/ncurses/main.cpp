@@ -39,6 +39,12 @@ namespace {
 
 }
 
+/**
+ * @brief Shows the arguments on a curses screen until a key is pressed; without a terminal on stdin and stdout, prints them through core2 instead.
+ * @param argc The argument count, as the C runtime passes it.
+ * @param argv The arguments; `argv[0]` is the program's name.
+ * @return Always 0.
+ */
 auto main(int argc, char** argv) -> int {
   os::Args args = os::args(argc, argv);
 

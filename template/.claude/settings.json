@@ -1,21 +1,27 @@
 {
   "permissions": {
     "allow": ["Edit(/docs/**)", "Edit(/proposals/**)", "Edit(/README.md)",
-              "Bash(make)", "Bash(make debug)", "Bash(make release)", "Bash(make lto)",
-              "Bash(make instrument)", "Bash(make bear)"],
+              "Bash(cmake --preset debug)", "Bash(cmake --preset release)",
+              "Bash(cmake --preset lto)", "Bash(cmake --preset instrument)",
+              "Bash(cmake --build --preset debug)", "Bash(cmake --build --preset release)",
+              "Bash(cmake --build --preset lto)", "Bash(cmake --build --preset instrument)",
+              "Bash(cmake --build --preset debug --target docs)"],
     "deny": ["Edit(/third-party/**)",
              "Edit(/third-party/core2/src/**)", "Edit(/third-party/core2/tests/**)",
-             "Edit(/third-party/core2/examples/**)", "Edit(/third-party/core2/Makefile)",
-             "Edit(/third-party/core2/core.mk)", "Edit(/third-party/core2/CLAUDE.md)",
-             "Edit(/third-party/core2/.claude/**)"]
+             "Edit(/third-party/core2/examples/**)", "Edit(/third-party/core2/tools/**)",
+             "Edit(/third-party/core2/bench/support/**)", "Edit(/third-party/core2/cmake/**)",
+             "Edit(/third-party/core2/CMakeLists.txt)", "Edit(/third-party/core2/CMakePresets.json)",
+             "Edit(/third-party/core2/CLAUDE.md)", "Edit(/third-party/core2/.claude/**)"]
   },
   "sandbox": {
     "enabled": true,
     "failIfUnavailable": true,
     "allowUnsandboxedCommands": false,
     "filesystem": {
-      "denyWrite": ["./src", "./Makefile", "./third-party",
-                    "./third-party/core2/src", "./third-party/core2/tests", "./third-party/core2/Makefile"]
+      "denyWrite": ["./src", "./CMakeLists.txt", "./CMakePresets.json", "./third-party",
+                    "./third-party/core2/src", "./third-party/core2/tests",
+                    "./third-party/core2/CMakeLists.txt", "./third-party/core2/CMakePresets.json",
+                    "./third-party/core2/cmake", "./third-party/core2/bench/support"]
     }
   },
   "hooks": {
