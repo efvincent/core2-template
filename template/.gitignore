@@ -1,7 +1,11 @@
 /build
 /.cache
 compile_commands.json
+vgcore*
 /.claude/settings.local.json
 /proposals
+/docs/html
+/docs/latex
+.idea
 {% if ui == "imgui" %}imgui.ini
 {% endif %}

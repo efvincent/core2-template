@@ -1,6 +1,11 @@
 {
-  "makefile.configureOnOpen": false,
   "C_Cpp.intelliSenseEngine": "disabled",
+  "clangd.arguments": [
+    "--compile-commands-dir=${workspaceFolder}",
+    "--header-insertion=never",
+    "--background-index",
+    "--completion-style=detailed"
+  ],
   "files.associations": {
     "*.cppm": "cpp"
   }

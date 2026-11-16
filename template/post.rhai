@@ -16,4 +16,4 @@ file::delete("post.rhai");
 
 print("");
 print("Next, once, in the new project: sh setup.sh   (adds the pinned submodules)");
-print("Then: make");
+print("Then: cmake --preset debug && cmake --build --preset debug");

@@ -4,25 +4,18 @@
     {
       "label": "build-debug",
       "type": "shell",
-      "command": "make",
-      "args": ["MODE=debug"],
+      "command": "cmake",
+      "args": ["--build", "--preset", "debug"],
       "group": { "kind": "build", "isDefault": true },
       "problemMatcher": ["$gcc"]
     },
     {
       "label": "build-release",
       "type": "shell",
-      "command": "make",
-      "args": ["MODE=release"],
+      "command": "cmake",
+      "args": ["--build", "--preset", "release"],
       "group": "build",
       "problemMatcher": ["$gcc"]
-    },
-    {
-      "label": "bear",
-      "type": "shell",
-      "command": "make",
-      "args": ["bear"],
-      "problemMatcher": []
     }
   ]
 }

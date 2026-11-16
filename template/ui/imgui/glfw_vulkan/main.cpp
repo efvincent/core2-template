@@ -325,6 +325,12 @@ namespace {
 
 }
 
+/**
+ * @brief Runs the ImGui window until the window is closed.
+ * @param argc The argument count, as the C runtime passes it.
+ * @param argv The arguments; `argv[0]` is the program's name.
+ * @return 0, or 1 when GLFW, the window or Vulkan cannot be set up.
+ */
 auto main(int argc, char** argv) -> int {
   os::Args args = os::args(argc, argv);
 
