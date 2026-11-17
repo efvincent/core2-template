@@ -62,6 +62,9 @@ CMake Tools keeps its selected preset in the editor's workspace state, which no 
 
 `./dev setup` names any missing tool before it changes anything.
 
+## Releases
+Each release is a tag `vX.Y.Z` on `main`; [CHANGELOG.md](CHANGELOG.md) lists what each changed. `copier copy gh:efvincent/core2-template` uses the latest tag, and `copier update` in a project moves it to the latest (or `--vcs-ref vX.Y.Z`). The version is counted from a generated project's side: a patch release fixes it, a minor release adds to it, and a major release means `copier update` leaves work to do by hand (the changelog says what). A merge that changes only this repo (docs, `check.sh`) is not released.
+
 ## Working on the template
 - [docs/design.md](docs/design.md): how it works, and why.
 - [docs/decisions.md](docs/decisions.md): the decisions, with dates.

@@ -37,3 +37,4 @@ Never edit `~/code/cpp/core2` from here. If the template needs a core2 change, s
 - Feature branches (`feature/<topic>`, `fix/<topic>`, `docs/<topic>`, `chore/<topic>`), Conventional Commits, local commits when the author says go. Stage named files, never `git add -A`.
 - No `Co-Authored-By` line, as in core2.
 - Claude pushes, deletes remote branches or opens PRs only when the author asks; otherwise the author pushes and merges.
+- Releases (decision 16): a branch that changes what a generated project gets (`template/`, `copier.yml`) adds its entry to `CHANGELOG.md` under `[Unreleased]`, and says whether it is a patch, minor or major release (counted from a generated project's side). Claude gives the tag and `gh release create` commands, with the notes in `proposals/`; the author tags. A branch that changes only this repo is not released.

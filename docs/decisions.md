@@ -41,6 +41,11 @@ Made by the author unless noted. Carried over from the handoff brief written at 
     - `CLAUDE.md` and `.claude/` are the author's controls, in the client and in this repo, as in core2: denied to the edit tools and to Bash (`denyWrite`), and changed only through a patch file in `proposals/` (a unified diff, checked with `git apply --check`) with the command to apply it. Controls that Claude could change would not control anything.
     - This repo's `.claude/settings.json` runs Claude Code's Bash in the sandbox: writes only inside the repo (not `CLAUDE.md` or `.claude/`) and `$TMPDIR`, network only to `github.com`.
 
+16. **Releases are tags, with a changelog** (2026-11-17; the convention is Claude's proposal, the author asked for it). `v1.0.0` is the first, the Copier template as merged.
+    - A merge to `main` that changes what a generated project gets (`template/`, `copier.yml`) is released: a `CHANGELOG.md` entry on the branch, under `[Unreleased]` until the release commit names the version and date, then the author tags the merge `vX.Y.Z` and creates the GitHub release with that entry as its notes. A merge that changes only this repo (its docs, `check.sh`, its settings) is not released.
+    - Semantic Versioning from the project's side: patch for fixes, minor for additions, major when `copier update` would leave hand work (a renamed or removed question, a moved file the author owns, a build change the author must follow).
+    - `copier copy gh:...` takes the latest tag; `copier update` moves a project between tags. A default `core2_version` bump is a minor release (new projects get the newer core2; existing ones keep their pin).
+
 ## Claude's choices (2026-10-31; the author may overrule)
 - The client's `CLAUDE.md` is stored as `template/CLAUDE.client.md` so it is not loaded as a nested `CLAUDE.md` while working on this repo; the hook renames it.
 - The hook moves the whole `ui/<variant>/` directory to `src/` (cargo-generate's `file::rename` needs the target's parent to exist, and the template has no `src/` of its own).
