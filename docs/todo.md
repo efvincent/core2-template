@@ -24,6 +24,8 @@ The order of work from the handoff brief, with status (2026-11-17, after the mer
 11. [ ] `./check.sh` for all seven variants (with `WINDOWED=1` on the author's desktop) on `v1.0.0`, since `./dev` and the protections came after the last full run. About five minutes; run when the author asks.
 12. [x] Releases (decision 16): `CHANGELOG.md` with `v1.0.0`, the README's "Releases", the convention in decision 16 (2026-11-17).
     - [x] The author applies `proposals/claude-md-releases.patch` (the release rule in this repo's `CLAUDE.md`, "Git") and creates the GitHub release for `v1.0.0` from `proposals/release-v1.0.0.md`.
+13. [x] Shift+F5 under CodeLLDB (`cmake.debugConfig`), clang-tidy (decision 17), the machine setup in the README, released as `v1.1.0` (2026-11-17). `./check.sh plain` passed, clang-tidy step included; the other six variants' `main.cpp` have not been through the clang-tidy step (item 11's full run will).
+    - [ ] core2 adopts the config: `proposals/core2-clang-tidy.md`, for a core2 session.
 
 ## Open questions
 None.

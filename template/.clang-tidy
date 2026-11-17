@@ -1,0 +1,88 @@
+# clang-tidy for this project, in core2's style (third-party/core2/docs/style.md).
+# clangd runs it as you type (`--clang-tidy` in .vscode/settings.json). From a
+# terminal: clang-tidy -p build/cmake/debug src/main.cpp
+#
+# Left out, because they fight the style: everything that wants the C++ standard
+# library (modernize-use-std-*, the container checks), C casts, C arrays, raw
+# pointers and unions (handmade code uses them), braces on one-line `if`s,
+# const on every local, magic numbers and short names, include-cleaner (modules),
+# implicit conversions core2 relies on (misc-explicit-constructor), and
+# readability-redundant-inline-specifier: an exported function defined in its
+# struct needs `inline` to be inlined across modules (style.md, "Performance").
+# The static analyzer (clang-analyzer-*) is left out too: clangd does not run
+# it, and from a terminal it follows calls into core2 and reports there.
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-signed-bitwise,
+  performance-*,
+  -performance-no-int-to-ptr,
+  portability-*,
+  -portability-avoid-pragma-once,
+  misc-*,
+  -misc-include-cleaner,
+  -misc-const-correctness,
+  -misc-use-anonymous-namespace,
+  -misc-use-internal-linkage,
+  -misc-no-recursion,
+  -misc-non-private-member-variables-in-classes,
+  -misc-explicit-constructor,
+  modernize-use-trailing-return-type,
+  modernize-use-nullptr,
+  modernize-use-override,
+  modernize-use-using,
+  modernize-use-equals-default,
+  modernize-use-equals-delete,
+  modernize-use-bool-literals,
+  modernize-use-nodiscard,
+  modernize-redundant-void-arg,
+  modernize-unary-static-assert,
+  modernize-concat-nested-namespaces,
+  readability-identifier-naming,
+  readability-else-after-return,
+  readability-redundant-*,
+  -readability-redundant-inline-specifier,
+  readability-misleading-indentation,
+  readability-duplicate-include,
+  readability-static-accessed-through-instance,
+  readability-avoid-const-params-in-decls,
+  readability-simplify-subscript-expr,
+  readability-non-const-parameter,
+  cppcoreguidelines-init-variables,
+  cppcoreguidelines-avoid-goto,
+  cppcoreguidelines-pro-type-member-init,
+  cppcoreguidelines-slicing
+
+# The project's own headers; core2 and ImGui are under third-party/.
+HeaderFilterRegex: '.*/src/.*'
+ExcludeHeaderFilterRegex: '.*/third-party/.*'
+
+CheckOptions:
+  # Trailing return types on functions, not on lambdas.
+  modernize-use-trailing-return-type.TransformLambdas: none
+  # Naming (style.md): PascalCase types, camelCase functions, members and
+  # variables, UPPER_SNAKE constants at namespace scope and static ones; local
+  # constants are camelCase, and so are `is`/`has` variable templates
+  # (`isOption<T>`).
+  readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.UnionCase: CamelCase
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.EnumConstantCase: CamelCase
+  readability-identifier-naming.TypeAliasCase: CamelCase
+  readability-identifier-naming.TypedefCase: CamelCase
+  readability-identifier-naming.ConceptCase: CamelCase
+  readability-identifier-naming.TemplateParameterCase: CamelCase
+  readability-identifier-naming.FunctionCase: camelBack
+  readability-identifier-naming.MethodCase: camelBack
+  readability-identifier-naming.MemberCase: camelBack
+  readability-identifier-naming.ParameterCase: camelBack
+  readability-identifier-naming.VariableCase: camelBack
+  readability-identifier-naming.LocalConstantCase: camelBack
+  readability-identifier-naming.GlobalConstantCase: UPPER_CASE
+  readability-identifier-naming.GlobalConstantIgnoredRegexp: '^(is|has)[A-Z][A-Za-z0-9]*$'
+  readability-identifier-naming.StaticConstantCase: UPPER_CASE
+  readability-identifier-naming.ClassConstantCase: UPPER_CASE
+  readability-identifier-naming.MacroDefinitionCase: UPPER_CASE

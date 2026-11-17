@@ -29,6 +29,9 @@ Short version:
 ## Changes to core2
 Never edit `~/code/cpp/core2` from here. If the template needs a core2 change, say so and describe it; it goes through core2's own session and gate (branch, tests, review, release, tag).
 
+## Proposals for other projects
+A suggestion for another project (core2, a generated client, ...) goes in `proposals/` as `<project>-<proposal>.md`, for example `proposals/core2-clang-tidy.md`: what to change, why, and the evidence (file and line, commands to reproduce). The other project's own session acts on it.
+
 ## Style
 - C++ in `template/*src*/` follows core2's `docs/style.md` (`~/code/cpp/core2/docs/style.md`): Orthodox / Handmade C++26, trailing return types, 2-space indent, no STD, RAII, RTTI or exceptions; C headers for ncurses, SDL3, GLFW are fine.
 - Markdown: short, factual, no filler. The client's docs speak to the client's author, not about this repo.

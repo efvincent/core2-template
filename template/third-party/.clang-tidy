@@ -1,0 +1,3 @@
+# The submodules (core2, ImGui) keep their own style: no clang-tidy checks here,
+# not the project's (../.clang-tidy).
+Checks: '-*'

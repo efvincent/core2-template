@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-17
+
+### Added
+- clang-tidy in core2's style: `.clang-tidy` (naming, trailing return types on functions, initialized locals, bug-prone patterns; nothing that wants the C++ standard library), run by clangd (`--clang-tidy` in `.vscode/settings.json`). `third-party/.clang-tidy` turns it off in the submodules. Claude cannot edit `.clang-tidy`.
+
+### Fixed
+- Shift+F5 (CMake Tools' *Debug*) debugs under CodeLLDB: `cmake.debugConfig` in `.vscode/settings.json`. Before, it stopped with "Configured debug type 'cppdbg' is not supported".
+
 ## [1.0.0] - 2026-11-17
 
 The first release, and the first as a Copier template (decision 14). Before it, the template was generated with cargo-generate and was not tagged.
@@ -24,5 +32,6 @@ The first release, and the first as a Copier template (decision 14). Before it, 
 ### Removed
 - `cargo-generate.toml`, `post.rhai` and the self-deleting `setup.sh`.
 
-[Unreleased]: https://github.com/efvincent/core2-template/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/efvincent/core2-template/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/efvincent/core2-template/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/efvincent/core2-template/releases/tag/v1.0.0

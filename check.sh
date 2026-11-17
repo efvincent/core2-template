@@ -4,8 +4,8 @@
 # project's `./dev setup` (submodules, the debug build, core2's reference);
 # checks the result, `./dev` itself, and that the setup can be rerun; builds
 # every CMake preset through `./dev build` (warnings fail the check); checks
-# the debug preset's compile_commands.json and both references; and runs the
-# binaries that can run headless.
+# the debug preset's compile_commands.json, clang-tidy on src/main.cpp and both
+# references; and runs the binaries that can run headless.
 #
 #   ./check.sh plain         the plain variant (the usual check)
 #   ./check.sh               every variant (about five minutes)
@@ -244,6 +244,13 @@ assert any(f.endswith("src/main.cpp") for f in files), "no entry for src/main.cp
 assert any("third-party/core2/src/" in f for f in files), "no entries for core2"
 ' "$dir/build/cmake/debug/compile_commands.json"
   echo "   compile_commands.json: ok"
+
+  # The generated main.cpp passes the project's .clang-tidy (core2's style)
+  run "$v: clang-tidy" clang-tidy -p "$dir/build/cmake/debug" --quiet --warnings-as-errors='*' "$dir/src/main.cpp"
+  if grep -n 'warning:' "$log"; then
+    fail "$v: clang-tidy warned on src/main.cpp"
+  fi
+  echo "   clang-tidy: ok"
 
   # The reference: warning-free (the Doxyfile makes warnings fatal), git-ignored,
   # and README.md's link to core2's reference works from it too
