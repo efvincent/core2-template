@@ -1,6 +1,6 @@
 # To do
 
-The order of work from the handoff brief, with status (2026-11-17).
+The order of work from the handoff brief, with status (2026-11-17, after the merge of `v1.0.0`).
 
 1. [x] This repo's `CLAUDE.md`, `README.md` and `docs/`, carrying over the brief's decisions.
    - [ ] The author deletes the brief, `~/code/cpp/core2/proposals/core2-template-brief.md` (git-ignored in core2; everything in it is now here). Still there on 2026-10-31.
@@ -16,14 +16,14 @@ The order of work from the handoff brief, with status (2026-11-17).
 7. [x] CMake only, on core2 `v2.0.0` (decision 12), on `main` since 2026-11-16: `CMakeLists.txt` and `CMakePresets.json` in place of the Makefile, the client's docs, settings and `.vscode/` in CMake terms, `check.sh` on presets. The remote branch `feature/cmake` is still there.
 8. [x] Editor, docs and README additions (decision 13), on `main` with item 7.
 9. [x] core2 `v2.1.8` (2.0.1 to 2.1.8 are docs, plus the additive `extend` and `splitInto` in 2.1.0), `./check.sh` passed for all seven variants with `CORE2_VERSION=v2.1.8` (2026-11-17), so it is the default `core2_version`. The client README points at core2's `docs/guide/debugging.md` and the user guide; the top README is brought up to date. On branch `feature/copier` with item 10.
-10. [ ] Copier (decision 14) and `./dev` (decision 15), branch `feature/copier`: `copier.yml`, the `*.jinja` files, the variant directories, `./dev` (with the rerunnable setup Copier's task runs), `core2_docs` and the README link, `.vscode/extensions.json` and CMake Tools, `check.sh` on Copier. `./check.sh plain` passes (2026-11-17). The author commits, pushes and merges.
-    - [x] `./check.sh` for all seven variants with `WINDOWED=1` passes on this branch (2026-11-17), and `./check.sh plain` inside this repo's sandbox.
-    - [x] clangd on a generated `plain`: `clangd --check=src/main.cpp --compile-commands-dir=build/cmake/debug`, 0 errors.
-    - [x] A generated `plain` opened in VSCodium by the author (2026-11-17): extensions, the CMake Tools preset prompt, clangd on `import core;`, F5, core2's reference. Before `./dev`.
-    - [ ] `./check.sh` for all seven variants again, after `./dev` and the protections.
-    - [ ] The author applies `proposals/claude-md-stray-line.patch` (`git apply proposals/claude-md-stray-line.patch`): a test line Claude appended to `CLAUDE.md` before the protection took effect.
-    - [ ] Tag this repo (`v1.0.0` or so) after the merge: `copier copy gh:...` then takes the latest tag instead of `main`'s `HEAD`, and `copier update` moves between tags.
-    - [ ] The remote branch `feature/cmake` (merged) can be deleted.
+10. [x] Copier (decision 14) and `./dev` (decision 15): `copier.yml`, the `*.jinja` files, the variant directories, `./dev` (with the rerunnable setup Copier's task runs), `core2_docs` and the README link, `.vscode/extensions.json` and CMake Tools, protected controls, `check.sh` on Copier. On `main` and tagged `v1.0.0` (2026-11-17).
+    - `./check.sh` passed for all seven variants with `WINDOWED=1` before `./dev`; `./check.sh plain` passes with `./dev`, also inside this repo's sandbox.
+    - clangd on a generated `plain`: 0 errors. The author opened a generated `plain` in VSCodium: extensions, the CMake Tools preset prompt, clangd on `import core;`, F5, core2's reference.
+    - `copier copy --trust gh:efvincent/core2-template` generates from the `v1.0.0` tag (`_commit: v1.0.0` in `.copier-answers.yml`), runs `./dev setup`, and leaves `dev` executable (2026-11-17). Inside Claude's sandbox, Copier needs `XDG_CACHE_HOME="$TMPDIR/cache"`: it caches remote templates in `~/.cache/copier`, which the sandbox does not let it write. A local path (as `check.sh` uses) needs no cache.
+    - The remote branches `feature/copier` and `feature/cmake` are deleted.
+11. [ ] `./check.sh` for all seven variants (with `WINDOWED=1` on the author's desktop) on `v1.0.0`, since `./dev` and the protections came after the last full run. About five minutes; run when the author asks.
+12. [x] Releases (decision 16): `CHANGELOG.md` with `v1.0.0`, the README's "Releases", the convention in decision 16 (2026-11-17).
+    - [ ] The author applies `proposals/claude-md-releases.patch` (the release rule in this repo's `CLAUDE.md`, "Git") and creates the GitHub release for `v1.0.0` from `proposals/release-v1.0.0.md`.
 
 ## Open questions
 None.
