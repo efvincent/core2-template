@@ -23,7 +23,7 @@ The order of work from the handoff brief, with status (2026-11-17, after the mer
     - The remote branches `feature/copier` and `feature/cmake` are deleted.
 11. [ ] `./check.sh` for all seven variants (with `WINDOWED=1` on the author's desktop) on `v1.0.0`, since `./dev` and the protections came after the last full run. About five minutes; run when the author asks.
 12. [x] Releases (decision 16): `CHANGELOG.md` with `v1.0.0`, the README's "Releases", the convention in decision 16 (2026-11-17).
-    - [ ] The author applies `proposals/claude-md-releases.patch` (the release rule in this repo's `CLAUDE.md`, "Git") and creates the GitHub release for `v1.0.0` from `proposals/release-v1.0.0.md`.
+    - [x] The author applies `proposals/claude-md-releases.patch` (the release rule in this repo's `CLAUDE.md`, "Git") and creates the GitHub release for `v1.0.0` from `proposals/release-v1.0.0.md`.
 
 ## Open questions
 None.
