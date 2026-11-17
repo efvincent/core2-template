@@ -4,11 +4,16 @@
     "--compile-commands-dir=${workspaceFolder}/build/cmake/debug",
     "--header-insertion=never",
     "--background-index",
-    "--completion-style=detailed"
+    "--completion-style=detailed",
+    "--clang-tidy"
   ],
   "cmake.useCMakePresets": "always",
   "cmake.configureOnOpen": true,
   "cmake.options.statusBarVisibility": "visible",
+  "cmake.debugConfig": {
+    "type": "lldb",
+    "cwd": "${workspaceFolder}"
+  },
   "files.associations": {
     "*.cppm": "cpp"
   },

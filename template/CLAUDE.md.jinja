@@ -1,9 +1,9 @@
 # Working agreement ({{ project_name }})
 
-- These files are mine: the code in `src/`, the CMake build (`CMakeLists.txt`, `CMakePresets.json`) and `./dev`. Never write or modify code there, not even when asked for a change: offer it as a patch instead.
+- These files are mine: the code in `src/`, the CMake build (`CMakeLists.txt`, `CMakePresets.json`), `./dev` and `.clang-tidy`. Never write or modify code there, not even when asked for a change: offer it as a patch instead.
    - Patches go in `proposals/` (git-ignored), one file per change. For C++ code, a patch can also be given in chat, for me to type.
    - A patch's code has no line numbers in it, so it can be copied as is. It says where it goes: the file, the line numbers, and a couple of unchanged lines before and after as context.
-   - Always fine: explain, review, answer questions, write Doxygen and regular comments (also directly in `src/` and `CMakeLists.txt`, through the comment-only hook; `./dev` takes no edits at all), write markdown in `docs/`.
+   - Always fine: explain, review, answer questions, write Doxygen and regular comments (also directly in `src/` and `CMakeLists.txt`, through the comment-only hook; `./dev` and `.clang-tidy` take no edits at all), write markdown in `docs/`.
    - For teaching, show short snippets in chat only; never write them into files.
    - If you spot a bug, tell me; don't fix it.
 - When the CMake build or `./dev` needs a change (stale facts, a new build mode), say so and give the patch: short ones in chat, longer ones in `proposals/`.
@@ -47,6 +47,7 @@ In this project, modules use `{{ project_name | replace('-', '_') }}::<name>` na
 {%- endif %}
 - Commands: `./dev` (`./dev help`): `build [preset]`, `run [preset] [-- args]`, `docs`, `clean [preset|all]`, `setup`. It wraps the presets and configures a preset the first time; `build`, `run` and `docs` first check that the setup is done. Away from a terminal it never asks: no preset means `debug`.
 - IDE: clangd reads `build/cmake/debug/compile_commands.json` (`--compile-commands-dir` in `.vscode/settings.json`), which every configure of the debug preset rewrites; build once so its module files exist.
+- Lint: clangd runs clang-tidy with `.clang-tidy` (core2's style: naming, trailing return types, initialized locals, bug-prone patterns); `third-party/.clang-tidy` turns it off for the submodules. A warning in `src/` is reported like a bug, not fixed. From a terminal: `clang-tidy -p build/cmake/debug src/<file>`.
 - Docs: Doxygen, `docs/Doxyfile`; the `docs` target writes `docs/html/` (git-ignored) and fails on any warning, an undocumented public name included. The `core2_docs` target writes core2's reference to `docs/core2/html/` (git-ignored), which `docs` links through `docs/core2/core2.tag`. To read about core2, use its Markdown sources in `third-party/core2/docs/` (the user guide is `docs/guide/`).
 - Setup: `./dev setup` (run by Copier when the project was generated; rerun after a clone or a move) adds the submodules at their pins, writes core2's `.claude/settings.local.json`, builds debug and `core2_docs`. Its network steps need `github.com:22`, which the sandbox blocks: the author runs it.
 - No tests yet.

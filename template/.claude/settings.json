@@ -10,7 +10,7 @@
               "Bash(cmake --build --preset lto)", "Bash(cmake --build --preset instrument)",
               "Bash(cmake --build --preset debug --target docs)",
               "Bash(cmake --build --preset debug --target core2_docs)"],
-    "deny": ["Edit(/CLAUDE.md)", "Edit(/.claude/**)", "Edit(/dev)", "Edit(/third-party/**)",
+    "deny": ["Edit(/CLAUDE.md)", "Edit(/.claude/**)", "Edit(/dev)", "Edit(/.clang-tidy)", "Edit(/third-party/**)",
              "Edit(/third-party/core2/src/**)", "Edit(/third-party/core2/tests/**)",
              "Edit(/third-party/core2/examples/**)", "Edit(/third-party/core2/tools/**)",
              "Edit(/third-party/core2/bench/support/**)", "Edit(/third-party/core2/cmake/**)",
@@ -22,7 +22,7 @@
     "failIfUnavailable": true,
     "allowUnsandboxedCommands": false,
     "filesystem": {
-      "denyWrite": ["./CLAUDE.md", "./.claude", "./src", "./CMakeLists.txt", "./CMakePresets.json", "./dev", "./third-party",
+      "denyWrite": ["./CLAUDE.md", "./.claude", "./src", "./CMakeLists.txt", "./CMakePresets.json", "./dev", "./.clang-tidy", "./third-party",
                     "./third-party/core2/src", "./third-party/core2/tests",
                     "./third-party/core2/CMakeLists.txt", "./third-party/core2/CMakePresets.json",
                     "./third-party/core2/cmake", "./third-party/core2/bench/support"]
