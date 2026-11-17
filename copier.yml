@@ -1,0 +1,55 @@
+# core2-template: a Copier template (https://copier.readthedocs.io).
+#   copier copy --trust gh:efvincent/core2-template my-app
+# How it works: docs/design.md.
+
+_min_copier_version: "9.6"
+_subdirectory: template
+# Only *.jinja files are rendered; everything else (the C++ sources) is copied
+# as is, since `{{` is valid C++.
+_templates_suffix: .jinja
+_answers_file: .copier-answers.yml
+
+project_name:
+  type: str
+  help: Project name (names the CMake project, the target and the binary)
+  default: "{{ _copier_conf.dst_path.name }}"
+  validator: >-
+    {% if not (project_name | regex_search('^[a-z][a-z0-9-]*$')) %}lowercase letters, digits and '-', starting with a letter{% endif %}
+
+core2_version:
+  type: str
+  help: core2 release tag to pin (v2.0.0 or later)
+  default: v2.1.8
+  validator: >-
+    {% if not (core2_version | regex_search('^v([2-9]|[1-9][0-9]+)\.[0-9]+\.[0-9]+$')) %}a tag vX.Y.Z with X >= 2 (core2 is CMake only since v2.0.0){% endif %}
+
+core2_url:
+  type: str
+  help: core2 repository URL
+  default: git@github.com:efvincent/core2.git
+
+ui:
+  type: str
+  help: UI
+  choices: [plain, ncurses, sdl3, imgui]
+  default: plain
+
+imgui_backend:
+  type: str
+  help: ImGui backend
+  choices: [sdl3_renderer, sdl3_gpu, glfw_opengl3, glfw_vulkan]
+  default: sdl3_renderer
+  when: "{{ ui == 'imgui' }}"
+
+# Computed: picks the one `{% if variant == ... %}src{% endif %}` directory.
+variant:
+  type: str
+  default: "{% if ui == 'imgui' %}imgui-{{ imgui_backend }}{% else %}{{ ui }}{% endif %}"
+  when: false
+
+# In the new project, after the files are copied: `./dev setup` (the
+# submodules, core2's Claude Code settings, the debug build and core2's HTML
+# reference).
+_tasks:
+  - command: sh dev setup
+    when: "{{ _copier_operation == 'copy' }}"

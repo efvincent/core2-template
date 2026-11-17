@@ -1,4 +1,4 @@
-# Doxygen configuration for {{project-name}}: the reference built from the
+# Doxygen configuration for {{ project_name }}: the reference built from the
 # Doxygen comments in src/, with README.md as the main page and docs/*.md as
 # pages. Only settings that differ from Doxygen's defaults are listed
 # (`doxygen -g` writes a file with every setting and its default).
@@ -8,7 +8,7 @@
 # Output: docs/html/index.html (git-ignored). Any warning fails the build,
 # undocumented exported names included, as in core2.
 
-PROJECT_NAME           = "{{project-name}}"
+PROJECT_NAME           = "{{ project_name }}"
 OUTPUT_DIRECTORY       = docs
 STRIP_FROM_PATH        = src .
 TAB_SIZE               = 2
@@ -19,6 +19,8 @@ INPUT                  = README.md docs src
 FILE_PATTERNS          = *.cppm *.cpp *.h *.md
 EXTENSION_MAPPING      = cppm=C++
 RECURSIVE              = YES
+# The generated references, not sources.
+EXCLUDE                = docs/html docs/latex docs/core2
 EXCLUDE_SYMBOLS        = *::detail *::detail::*
 USE_MDFILE_AS_MAINPAGE = README.md
 
@@ -32,3 +34,6 @@ WARN_AS_ERROR          = FAIL_ON_WARNINGS
 SOURCE_BROWSER         = YES
 GENERATE_TREEVIEW      = YES
 GENERATE_LATEX         = NO
+# Links to core2's names go to core2's reference (the core2_docs target),
+# relative to docs/html/.
+TAGFILES               = docs/core2/core2.tag=../core2/html

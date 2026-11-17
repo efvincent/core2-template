@@ -1,11 +1,13 @@
-# Working agreement ({{project-name}})
+# Working agreement ({{ project_name }})
 
-- I write the code in `src/` and the CMake build (`CMakeLists.txt`, `CMakePresets.json`). Never write or modify code there unless my message explicitly asks for that specific change; a grant never carries over.
-   - When I do grant it, write the result into `proposals/`, never into `src/` or the CMake build. I will move it myself.
-   - Always fine: explain, review, answer questions, write Doxygen and regular comments (also directly in `src/` and `CMakeLists.txt`, through the comment-only hook), write markdown in `docs/`.
+- These files are mine: the code in `src/`, the CMake build (`CMakeLists.txt`, `CMakePresets.json`) and `./dev`. Never write or modify code there, not even when asked for a change: offer it as a patch instead.
+   - Patches go in `proposals/` (git-ignored), one file per change. For C++ code, a patch can also be given in chat, for me to type.
+   - A patch's code has no line numbers in it, so it can be copied as is. It says where it goes: the file, the line numbers, and a couple of unchanged lines before and after as context.
+   - Always fine: explain, review, answer questions, write Doxygen and regular comments (also directly in `src/` and `CMakeLists.txt`, through the comment-only hook; `./dev` takes no edits at all), write markdown in `docs/`.
    - For teaching, show short snippets in chat only; never write them into files.
-   - If you spot a bug, tell me; don't fix it. If I ask for a patch, say where it goes (a couple of lines of context before and after) and give it to me to type.
-- When `CLAUDE.md` or the CMake build needs a change (stale facts, a new build mode, a new rule), say so and give exact update instructions: where it goes, the old text and the new text. Short ones in chat, longer ones in `proposals/`.
+   - If you spot a bug, tell me; don't fix it.
+- When the CMake build or `./dev` needs a change (stale facts, a new build mode), say so and give the patch: short ones in chat, longer ones in `proposals/`.
+- This `CLAUDE.md` and `.claude/` (the permissions, the sandbox, the hook) are mine too, and are never edited, not even comments: controls that Claude could change would not control anything. A change to them always comes as a patch file in `proposals/` (a unified diff, checked with `git apply --check`), with the command to apply it, as in core2. `.claude/settings.json` enforces this (`deny` for the edit tools, `denyWrite` for Bash).
 - Claude writes `docs/` (`docs/Doxyfile` included) and `README.md`.
 
 ## third-party/: nobody edits it
@@ -19,37 +21,39 @@ core2 protects these in its own repo, and they stay protected here:
 - `third-party/core2/tests/`: Claude writes tests only in a core2 session (started in `third-party/core2`, or a standalone clone), under core2's rules, never from a session of this project.
 - `third-party/core2/CLAUDE.md`, `docs/style.md` and `.claude/` (the settings and the comment-only hook this project runs): core2's working agreement, style and guard. Read them; never change them from here.
 - A bug spotted in core2 is reported, with where it is; it is not fixed here and not worked around in `src/`. A fix happens in core2's repo, and then this project bumps its pin.
-- `.claude/settings.json` enforces this: `deny` for the edit tools on all of `third-party/`, with core2's protected paths listed by name, and `denyWrite` for Bash on `./third-party`, plus core2's own (`src`, `tests`, `CMakeLists.txt`, `CMakePresets.json`, `cmake`, `bench/support`) by name.
+- `.claude/settings.json` enforces this: `deny` for the edit tools on `./dev` and all of `third-party/`, with core2's protected paths listed by name, and `denyWrite` for Bash on `./third-party`, plus core2's own (`src`, `tests`, `CMakeLists.txt`, `CMakePresets.json`, `cmake`, `bench/support`) by name.
 - Then I bump the pin: `git -C third-party/core2 fetch --tags && git -C third-party/core2 checkout vX.Y.Z && git add third-party/core2`, rebuild, and commit it as `chore(deps): core2 vX.Y.Z`. I run the fetch and the checkout (the sandbox blocks `github.com:22` and writes under `./third-party`); Claude checks the result with `git -C third-party/core2 status --short` and `describe --tags`. How a core2 fix found here goes through core2: `docs/core2.md`.
-- If `third-party/core2` is empty, the comment-only hook (which lives there) blocks every Edit and Write, and CMake stops. Tell me to run `git submodule update --init`.
+- If `third-party/core2` is empty, the comment-only hook (which lives there) blocks every Edit and Write, and CMake stops. Tell me to run `./dev setup`.
 
 ## Code style
 The style rules (language, modules and namespaces, naming, performance, using core2, Doxygen) come from the pinned core2, so they follow its version:
 
 @third-party/core2/docs/style.md
 
-In this project, modules use `{{project-name | snake_case}}::<name>` namespaces with private helpers in `detail`.
+In this project, modules use `{{ project_name | replace('-', '_') }}::<name>` namespaces with private helpers in `detail`.
 
 ## Project
 - Build: CMake (`CMakeLists.txt`, `CMakePresets.json`), with core2 through `add_subdirectory(third-party/core2)` and the target `core2::core2`, which carries core2's required flags (C++26, `-fno-exceptions -fno-rtti -nostdinc++ -nostdlib++`: no C++ standard library headers or runtime; C headers only). The project compiles as `gnu++26`, CMake's default (core2's D43). `-DNDEBUG` comes only from the presets' build types, never from a target: a mismatch fails to link, on `core2_built_with_NDEBUG` or `core2_built_without_NDEBUG` (core2's D44).
-- Modes: the presets `debug`, `release`, `lto`, `instrument`. Binary: `build/cmake/<preset>/{{project-name}}`.
+- Modes: the presets `debug`, `release`, `lto`, `instrument`. Binary: `build/cmake/<preset>/{{ project_name }}`.
 - Sources: `src/**/*.cpp` (each may `import core;`) and the project's modules `src/**/*.cppm` (`export module <name>;`, a `CXX_MODULES` file set; `clang-scan-deps` finds their imports).
 {%- if ui == "plain" %}
 - UI: plain console, through `base::console`.
-{%- elsif ui == "ncurses" %}
+{%- elif ui == "ncurses" %}
 - UI: ncurses (`ncursesw`, through pkg-config's imported target `PkgConfig::ui`). curses owns the terminal between `initscr` and `endwin`: no `console::print` in between. Without a terminal on stdin and stdout, `main` prints through core2 instead.
-{%- elsif ui == "sdl3" %}
+{%- elif ui == "sdl3" %}
 - UI: SDL3 with SDL_Renderer (`sdl3`, through pkg-config's imported target `PkgConfig::ui`). SDL's C headers are used as-is.
 {%- else %}
-- UI: Dear ImGui with the {{imgui_backend}} backends, in `third-party/imgui` (pinned like core2, never edited). `CMakeLists.txt` builds it as the `imgui` target, with its own flags (none of core2's, no warnings, `-fno-threadsafe-statics`); the project's sources see its headers as system headers. Platform libraries come through pkg-config's imported target `PkgConfig::ui`. `imgui.ini` (window positions) is git-ignored.
+- UI: Dear ImGui with the {{ imgui_backend }} backends, in `third-party/imgui` (pinned like core2, never edited). `CMakeLists.txt` builds it as the `imgui` target, with its own flags (none of core2's, no warnings, `-fno-threadsafe-statics`); the project's sources see its headers as system headers. Platform libraries come through pkg-config's imported target `PkgConfig::ui`. `imgui.ini` (window positions) is git-ignored.
 {%- endif %}
-- IDE: clangd reads `compile_commands.json` (git-ignored) at the root, a link to `build/cmake/debug/compile_commands.json`, which every configure rewrites; build once so its module files exist.
-- Docs: Doxygen, `docs/Doxyfile`; the `docs` target writes `docs/html/` (git-ignored) and fails on any warning, an undocumented public name included.
+- Commands: `./dev` (`./dev help`): `build [preset]`, `run [preset] [-- args]`, `docs`, `clean [preset|all]`, `setup`. It wraps the presets and configures a preset the first time; `build`, `run` and `docs` first check that the setup is done. Away from a terminal it never asks: no preset means `debug`.
+- IDE: clangd reads `build/cmake/debug/compile_commands.json` (`--compile-commands-dir` in `.vscode/settings.json`), which every configure of the debug preset rewrites; build once so its module files exist.
+- Docs: Doxygen, `docs/Doxyfile`; the `docs` target writes `docs/html/` (git-ignored) and fails on any warning, an undocumented public name included. The `core2_docs` target writes core2's reference to `docs/core2/html/` (git-ignored), which `docs` links through `docs/core2/core2.tag`. To read about core2, use its Markdown sources in `third-party/core2/docs/` (the user guide is `docs/guide/`).
+- Setup: `./dev setup` (run by Copier when the project was generated; rerun after a clone or a move) adds the submodules at their pins, writes core2's `.claude/settings.local.json`, builds debug and `core2_docs`. Its network steps need `github.com:22`, which the sandbox blocks: the author runs it.
 - No tests yet.
 
 ## What Claude may run
-- `cmake --preset <p>` and `cmake --build --preset <p>` for `debug`, `release`, `lto` and `instrument`, and `cmake --build --preset debug --target docs`. Nothing else from the build (no `clean` unless asked).
-- Run the binary (`./build/cmake/debug/{{project-name}}`) when that shows something useful{% if ui != "plain" %}; it needs a terminal or a display, so usually only build it{% endif %}.
+- `./dev build [preset]`, `./dev docs`, `./dev help`, and the same through `cmake --preset <p>` / `cmake --build --preset <p>` for `debug`, `release`, `lto` and `instrument`. No `./dev clean` or `./dev setup` unless asked.
+- Run the binary (`./dev run`, or `./build/cmake/debug/{{ project_name }}`) when that shows something useful{% if ui != "plain" %}; it needs a terminal or a display, so usually only build it{% endif %}.
 - A build failure is reported, never fixed by touching `src/` or the CMake build.
 
 ## Git

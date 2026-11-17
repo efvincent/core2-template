@@ -1,12 +1,19 @@
 {
   "C_Cpp.intelliSenseEngine": "disabled",
   "clangd.arguments": [
-    "--compile-commands-dir=${workspaceFolder}",
+    "--compile-commands-dir=${workspaceFolder}/build/cmake/debug",
     "--header-insertion=never",
     "--background-index",
     "--completion-style=detailed"
   ],
+  "cmake.useCMakePresets": "always",
+  "cmake.configureOnOpen": true,
+  "cmake.options.statusBarVisibility": "visible",
   "files.associations": {
     "*.cppm": "cpp"
+  },
+  "files.exclude": {
+    "docs/html": true,
+    "docs/core2": true
   }
 }

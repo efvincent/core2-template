@@ -1,6 +1,6 @@
 # core2 in this project
 
-core2 is a git submodule at `third-party/core2`, from `{{core2_url}}`, pinned to a release tag (`{{core2_version}}` when the project was generated). The pin is the commit the superproject records for `third-party/core2` (`git submodule status` shows it).
+core2 is a git submodule at `third-party/core2`, from `{{ core2_url }}`, pinned to a release tag (`{{ core2_version }}` when the project was generated). The pin is the commit the superproject records for `third-party/core2` (`git submodule status` shows it).
 
 ## What comes from the pin
 - The library itself, built from source inside this project's build: `CMakeLists.txt` adds it with `add_subdirectory(third-party/core2)` and links the target `core2::core2` (core2 is CMake only since `v2.0.0`).
@@ -14,10 +14,11 @@ Bumping the pin updates all three.
 git -C third-party/core2 fetch --tags
 git -C third-party/core2 checkout vX.Y.Z
 git add third-party/core2
-cmake --build --preset debug
+./dev build
+./dev docs
 git commit -m "chore(deps): core2 vX.Y.Z"
 ```
-CMake rebuilds the core2 modules that changed, and everything that imports them. core2's `CHANGELOG.md` lists what changed; since `1.0.0`, a breaking change bumps core2's major version.
+CMake rebuilds the core2 modules that changed, and everything that imports them; `./dev docs` rebuilds core2's reference (`docs/core2/html/`) for the new pin. core2's `CHANGELOG.md` lists what changed; since `1.0.0`, a breaking change bumps core2's major version.
 
 The author runs the fetch and the checkout. From Claude's sandbox they fail halfway: the fetch needs `github.com:22`, and the checkout moves the submodule's `HEAD` and index (in `.git/modules/`) but cannot write the files under `./third-party`, which leaves a submodule that looks heavily modified. Claude checks the result: `git -C third-party/core2 status --short` (empty) and `git -C third-party/core2 describe --tags` (the new tag).
 
@@ -35,27 +36,18 @@ Nothing under `third-party/` is edited from a session of this project. A change 
 The fix can be made right here, in the submodule, as core2 work. core2's `docs/workflow.md`, "Working from a client's submodule", has the full flow. In short:
 1. Start Claude Code in `third-party/core2`, not at this project's root. That is a core2 session: core2's `CLAUDE.md`, settings and hook apply. This project's `CLAUDE.md` is still loaded (it is in a parent directory), and it says its `third-party/` rules do not apply there.
 2. Branch from core2's `main`: `git fetch origin && git switch -c fix/<topic> origin/main` (in `third-party/core2`). Edits made at the tag come along.
-3. Work as in core2. This project's build compiles core2 from the submodule's working tree, so `cmake --build --preset debug` here picks up an edit there right away, before it is committed. After adding, renaming or removing a core2 file, build here and restart clangd: the editor reads this project's `compile_commands.json`, not core2's.
+3. Work as in core2. This project's build compiles core2 from the submodule's working tree, so `./dev build` here picks up an edit there right away, before it is committed. After adding, renaming or removing a core2 file, build here and restart clangd: the editor reads this project's `compile_commands.json`, not core2's.
 4. Commit, review, push, PR, merge and tag in core2. Then, in `third-party/core2`, `git switch main && git pull && git checkout vX.Y.Z`, and bump the pin as above.
 
 Until step 4, this project's `git status` shows `third-party/core2` as modified. Do not stage it before the tag.
 
 ### Letting Claude commit in a core2 session
-git keeps the submodule's data in this project's `.git/modules/third-party/core2`, outside a core2 session's sandbox, so Claude can edit but not commit there unless core2's git-ignored `third-party/core2/.claude/settings.local.json` allows it. `setup.sh` wrote that file. After a fresh clone of this project, or after moving it, (re)create it from the project's root:
-```sh
-python3 -c '
-import json, sys
-g = sys.argv[1]
-fs = { "allowWrite": [g], "denyWrite": [g + "/hooks", g + "/config"] }
-with open(sys.argv[2], "w") as f:
-  json.dump({ "sandbox": { "filesystem": fs } }, f, indent=2)
-  f.write("\n")
-' "$(git -C third-party/core2 rev-parse --absolute-git-dir)" third-party/core2/.claude/settings.local.json
-```
+git keeps the submodule's data in this project's `.git/modules/third-party/core2`, outside a core2 session's sandbox, so Claude can edit but not commit there unless core2's git-ignored `third-party/core2/.claude/settings.local.json` allows it. `./dev setup` writes that file, with the git directory's absolute path; after a fresh clone of this project, or after moving it, run `./dev setup` again to rewrite it (it keeps the pins; `./dev build` notices and offers it).
 The git directory's `hooks/` and `config` stay denied: git runs and reads them outside the sandbox. A running session picks the file up without a restart.
 
 ## A missing submodule
 After `git clone` without `--recurse-submodules`, `third-party/core2` is empty: CMake stops with a message, and the comment-only hook blocks every Claude Code edit. Fix:
 ```sh
-git submodule update --init
+./dev setup
 ```
+(or just `git submodule update --init`, which skips the settings file, the build and core2's reference).

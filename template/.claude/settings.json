@@ -1,12 +1,16 @@
 {
   "permissions": {
     "allow": ["Edit(/docs/**)", "Edit(/proposals/**)", "Edit(/README.md)",
+              "Bash(./dev build)", "Bash(./dev build debug)", "Bash(./dev build release)",
+              "Bash(./dev build lto)", "Bash(./dev build instrument)",
+              "Bash(./dev run *)", "Bash(./dev docs)", "Bash(./dev help)",
               "Bash(cmake --preset debug)", "Bash(cmake --preset release)",
               "Bash(cmake --preset lto)", "Bash(cmake --preset instrument)",
               "Bash(cmake --build --preset debug)", "Bash(cmake --build --preset release)",
               "Bash(cmake --build --preset lto)", "Bash(cmake --build --preset instrument)",
-              "Bash(cmake --build --preset debug --target docs)"],
-    "deny": ["Edit(/third-party/**)",
+              "Bash(cmake --build --preset debug --target docs)",
+              "Bash(cmake --build --preset debug --target core2_docs)"],
+    "deny": ["Edit(/CLAUDE.md)", "Edit(/.claude/**)", "Edit(/dev)", "Edit(/third-party/**)",
              "Edit(/third-party/core2/src/**)", "Edit(/third-party/core2/tests/**)",
              "Edit(/third-party/core2/examples/**)", "Edit(/third-party/core2/tools/**)",
              "Edit(/third-party/core2/bench/support/**)", "Edit(/third-party/core2/cmake/**)",
@@ -18,7 +22,7 @@
     "failIfUnavailable": true,
     "allowUnsandboxedCommands": false,
     "filesystem": {
-      "denyWrite": ["./src", "./CMakeLists.txt", "./CMakePresets.json", "./third-party",
+      "denyWrite": ["./CLAUDE.md", "./.claude", "./src", "./CMakeLists.txt", "./CMakePresets.json", "./dev", "./third-party",
                     "./third-party/core2/src", "./third-party/core2/tests",
                     "./third-party/core2/CMakeLists.txt", "./third-party/core2/CMakePresets.json",
                     "./third-party/core2/cmake", "./third-party/core2/bench/support"]

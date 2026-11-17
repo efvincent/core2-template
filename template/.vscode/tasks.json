@@ -4,18 +4,25 @@
     {
       "label": "build-debug",
       "type": "shell",
-      "command": "cmake",
-      "args": ["--build", "--preset", "debug"],
+      "command": "./dev",
+      "args": ["build", "debug"],
       "group": { "kind": "build", "isDefault": true },
       "problemMatcher": ["$gcc"]
     },
     {
       "label": "build-release",
       "type": "shell",
-      "command": "cmake",
-      "args": ["--build", "--preset", "release"],
+      "command": "./dev",
+      "args": ["build", "release"],
       "group": "build",
       "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "docs",
+      "type": "shell",
+      "command": "./dev",
+      "args": ["docs"],
+      "problemMatcher": []
     }
   ]
 }

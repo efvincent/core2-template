@@ -1,0 +1,248 @@
+#!/bin/sh
+# ./dev: the one command for {{ project_name }}. `./dev help` lists what it does.
+# It wraps the CMake presets (CMakePresets.json) and the one-time setup; the
+# build itself is CMakeLists.txt.
+#
+# At a terminal, a missing command or preset is asked for (Enter picks the
+# first). Elsewhere (editor tasks, scripts, Claude Code) it is never asked: no
+# command prints the help, and no preset means debug. build, run and docs
+# first check that the setup is done (the submodules, core2's settings for
+# this location), and offer to run it, or, away from a terminal, stop with
+# the fix.
+set -eu
+cd "$(dirname "$0")"
+
+name={{ project_name }}
+presets="debug release lto instrument"
+
+usage() {
+  cat <<EOF
+./dev                        pick a command (at a terminal; otherwise this help)
+./dev build [preset]         configure the preset if needed, then build it
+./dev run [preset] [-- args] build, then run build/cmake/<preset>/$name with args
+./dev docs                   build both references: docs/html/ and core2's docs/core2/html/
+./dev clean [preset|all]     remove a preset's build output, or all of build/
+./dev setup                  submodules, core2's Claude Code settings, the debug build,
+                             core2's reference (run once after a clone; safe to rerun)
+./dev help                   this
+
+Presets: debug (-O0 -g), release (-O3 -march=native, NDEBUG), lto (release + full LTO),
+instrument (ASan + UBSan). Without one, debug.
+EOF
+}
+
+die() {
+  echo "./dev: $*" >&2
+  exit 1
+}
+
+# Decided once, here: inside $(...) stdout is a pipe, so a later [ -t 1 ]
+# would always say no.
+if [ -t 0 ] && [ -t 1 ]; then at_terminal=1; else at_terminal=; fi
+interactive() {
+  [ -n "$at_terminal" ]
+}
+
+# choose <prompt> <option...>: asks for one of the options by number (Enter is
+# the first) and prints it.
+choose() {
+  prompt=$1
+  shift
+  i=1
+  for o in "$@"; do
+    printf '  %d) %s\n' "$i" "$o" >&2
+    i=$((i + 1))
+  done
+  printf '%s [1]: ' "$prompt" >&2
+  read -r answer || answer=
+  [ -n "$answer" ] || answer=1
+  i=1
+  for o in "$@"; do
+    if [ "$answer" = "$i" ] || [ "$answer" = "$o" ]; then
+      printf '%s\n' "$o"
+      return 0
+    fi
+    i=$((i + 1))
+  done
+  die "no such choice: $answer"
+}
+
+is_preset() {
+  case " $presets " in
+    *" $1 "*) return 0 ;;
+  esac
+  return 1
+}
+
+# pick_preset [arg]: the preset named by arg, else asked (at a terminal), else debug.
+pick_preset() {
+  if [ -n "${1:-}" ]; then
+    is_preset "$1" || die "unknown preset '$1' (presets: $presets)"
+    printf '%s\n' "$1"
+  elif interactive; then
+    # shellcheck disable=SC2086
+    choose "Preset" $presets
+  else
+    printf 'debug\n'
+  fi
+}
+
+# setup_missing: prints what `./dev setup` would fix, nothing when all is done.
+setup_missing() {
+  [ -d .git ] || echo "no git repository"
+  [ -f third-party/core2/CMakeLists.txt ] || echo "third-party/core2 is not checked out"
+{%- if ui == "imgui" %}
+  [ -f third-party/imgui/imgui.h ] || echo "third-party/imgui is not checked out"
+{%- endif %}
+  if [ -f third-party/core2/CMakeLists.txt ]; then
+    local_settings=third-party/core2/.claude/settings.local.json
+    if [ ! -f "$local_settings" ]; then
+      echo "core2's Claude Code settings ($local_settings) are not written"
+    elif ! grep -qF "\"$(git -C third-party/core2 rev-parse --absolute-git-dir 2>/dev/null)\"" "$local_settings"; then
+      echo "core2's Claude Code settings point at another location (the project moved)"
+    fi
+  fi
+}
+
+# need_setup: before a build, the setup must be done. At a terminal, offers to
+# run it; elsewhere, stops with the fix.
+need_setup() {
+  missing_steps=$(setup_missing)
+  [ -n "$missing_steps" ] || return 0
+  echo "The setup is not complete:" >&2
+  printf '%s\n' "$missing_steps" | sed 's/^/  - /' >&2
+  interactive || die "run ./dev setup first"
+  printf 'Run ./dev setup now? [Y/n] ' >&2
+  read -r answer || answer=n
+  case $answer in
+    "" | y | Y | yes) cmd_setup ;;
+    *) die "run ./dev setup first" ;;
+  esac
+}
+
+configure() {
+  # Configured once per preset; after that, a build reconfigures by itself.
+  [ -f "build/cmake/$1/CMakeCache.txt" ] || cmake --preset "$1"
+}
+
+build() {
+  configure "$1"
+  cmake --build --preset "$1"
+}
+
+cmd_build() {
+  p=$(pick_preset "${1:-}")
+  build "$p"
+}
+
+cmd_run() {
+  p=
+  if [ $# -gt 0 ] && is_preset "$1"; then
+    p=$1
+    shift
+  fi
+  [ $# -eq 0 ] || [ "$1" != "--" ] || shift
+  p=$(pick_preset "$p")
+  build "$p"
+  exec "build/cmake/$p/$name" "$@"
+}
+
+cmd_docs() {
+  configure debug
+  cmake --build --preset debug --target docs
+  echo "docs/html/index.html, and core2's docs/core2/html/index.html"
+}
+
+cmd_clean() {
+  what=${1:-}
+  if [ -z "$what" ] && interactive; then
+    # shellcheck disable=SC2086
+    what=$(choose "Clean" $presets all)
+  fi
+  [ -n "$what" ] || what=debug
+  if [ "$what" = all ]; then
+    rm -rf build
+    echo "build/ removed"
+  else
+    is_preset "$what" || die "unknown preset '$what' (presets: $presets, or all)"
+    [ -f "build/cmake/$what/CMakeCache.txt" ] || { echo "build/cmake/$what is not configured"; return 0; }
+    cmake --build --preset "$what" --target clean
+  fi
+}
+
+# add_pinned <url> <path> <tag>: the submodule at <path>. A new one is checked
+# out at <tag> and staged (the staged gitlink is the pin); an existing one is
+# brought to the commit already recorded, so a later bump is kept.
+add_pinned() {
+  if [ -z "$(git ls-files --stage -- "$2")" ]; then
+    git submodule add -q -- "$1" "$2"
+    git -C "$2" -c advice.detachedHead=false checkout -q "$3"
+    git add .gitmodules "$2"
+    echo "$2 pinned at $3"
+  else
+    git submodule update -q --init -- "$2"
+    echo "$2 at its recorded pin ($(git -C "$2" describe --tags --always))"
+  fi
+}
+
+cmd_setup() {
+  # The tools, before anything is changed.
+  missing=
+  for tool in git python3 cmake ninja clang++ clang-scan-deps doxygen{% if ui != "plain" %} pkg-config{% endif %}; do
+    command -v "$tool" >/dev/null 2>&1 || missing="$missing $tool"
+  done
+  [ -z "$missing" ] || die "not found:$missing (see README.md, \"Prerequisites\")"
+
+  [ -d .git ] || git init -q
+
+  add_pinned '{{ core2_url }}' third-party/core2 '{{ core2_version }}'
+{%- if ui == "imgui" %}
+  add_pinned https://github.com/ocornut/imgui.git third-party/imgui v1.92.8
+{%- endif %}
+
+  # core2's local Claude Code settings (git-ignored by core2). A session
+  # started in third-party/core2 works on core2 itself (docs/core2.md), but git
+  # keeps the submodule's data in this repo's .git/modules, outside that
+  # session's sandbox. Allow writes there so Claude can commit core2 work; not
+  # to the hooks or the config, which git runs and reads outside the sandbox.
+  # Rewritten on every run, since the path is absolute and changes when the
+  # project moves.
+  core2_local=third-party/core2/.claude/settings.local.json
+  python3 -c '
+import json, sys
+g = sys.argv[1]
+fs = { "allowWrite": [g], "denyWrite": [g + "/hooks", g + "/config"] }
+with open(sys.argv[2], "w") as f:
+  json.dump({ "sandbox": { "filesystem": fs } }, f, indent=2)
+  f.write("\n")
+' "$(git -C third-party/core2 rev-parse --absolute-git-dir)" "$core2_local"
+  echo "$core2_local written (Claude can commit in a core2 session)"
+
+  # The debug build: clangd reads build/cmake/debug/compile_commands.json, and
+  # its module flags name files the build writes. Then core2's reference.
+  build debug
+  cmake --build --preset debug --target core2_docs
+
+  echo "Done: build/cmake/debug/$name is built, and core2's reference is docs/core2/html/index.html."
+  echo "Next: ./dev run, or ./dev for the list."
+}
+
+cmd=${1:-}
+[ $# -eq 0 ] || shift
+if [ -z "$cmd" ]; then
+  if interactive; then
+    cmd=$(choose "Command" build run docs clean setup help)
+  else
+    cmd=help
+  fi
+fi
+
+case $cmd in
+  build) need_setup; cmd_build "$@" ;;
+  run) need_setup; cmd_run "$@" ;;
+  docs) need_setup; cmd_docs ;;
+  clean) cmd_clean "$@" ;;
+  setup) cmd_setup ;;
+  help | -h | --help) usage ;;
+  *) usage >&2; die "unknown command '$cmd'" ;;
+esac
