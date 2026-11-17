@@ -1,28 +1,35 @@
 #!/bin/sh
-# Generates each variant of the template into a temp dir, runs its setup.sh,
-# checks the result, configures and builds every CMake preset (warnings fail
-# the check), checks the debug preset's compile_commands.json, builds the
-# Doxygen reference (when doxygen is installed), and runs the binaries that
-# can run headless.
+# Generates each variant of the template into a temp dir with Copier (from
+# the working tree, uncommitted changes included), whose task runs the
+# project's `./dev setup` (submodules, the debug build, core2's reference);
+# checks the result, `./dev` itself, and that the setup can be rerun; builds
+# every CMake preset through `./dev build` (warnings fail the check); checks
+# the debug preset's compile_commands.json and both references; and runs the
+# binaries that can run headless.
 #
-#   ./check.sh               every variant
-#   ./check.sh plain ...     only these
+#   ./check.sh plain         the plain variant (the usual check)
+#   ./check.sh               every variant (about five minutes)
+#   ./check.sh sdl3 ...      only these
 #
 # Environment:
 #   CORE2_DIR      a local core2 clone to use as core2_url, for an offline run or
 #                  a tag not pushed yet (default: none, so core2 comes from
-#                  core2_url's default in template/cargo-generate.toml, over SSH)
+#                  core2_url's default in copier.yml, over SSH)
 #   CORE2_VERSION  the tag to pin (default: core2_version's default in
-#                  template/cargo-generate.toml, which is what gets checked)
+#                  copier.yml, which is what gets checked)
 #   KEEP=1         keep the temp dir after a pass (it is always kept after a failure)
 #   WINDOWED=1     also run the ImGui variants that need a real display
 #                  (sdl3_gpu, glfw_opengl3, glfw_vulkan), as run_window does
 set -eu
 
 here=$(cd "$(dirname "$0")" && pwd)
-default_url=$(sed -n 's/^core2_url = .*default = "\([^"]*\)".*/\1/p' "$here/template/cargo-generate.toml")
+# default_of <question>: the `default:` of a question in copier.yml.
+default_of() {
+  sed -n "/^$1:/,/^\$/s/^  default: *//p" "$here/copier.yml"
+}
+default_url=$(default_of core2_url)
 core2=${CORE2_DIR:-$default_url}
-default_version=$(sed -n 's/^core2_version = .*default = "\([^"]*\)".*/\1/p' "$here/template/cargo-generate.toml")
+default_version=$(default_of core2_version)
 version=${CORE2_VERSION:-$default_version}
 all_variants="plain ncurses sdl3 imgui-sdl3_renderer imgui-sdl3_gpu imgui-glfw_opengl3 imgui-glfw_vulkan"
 variants=${*:-$all_variants}
@@ -103,25 +110,38 @@ check_variant() {
   dir=$out/$name
   echo "== $v ($name)"
 
-  set -- -d ui="$ui" -d core2_url="$core2" -d core2_version="$version"
-  if [ -n "$backend" ]; then set -- "$@" -d imgui_backend="$backend"; fi
-  run "$v: cargo generate" cargo generate --path "$here" template \
-    --name "$name" --destination "$out" --silent "$@"
-  run "$v: setup.sh" sh "$dir/setup.sh"
+  set -- --data project_name="$name" --data ui="$ui" --data core2_url="$core2" --data core2_version="$version"
+  if [ -n "$backend" ]; then set -- "$@" --data imgui_backend="$backend"; fi
+  run "$v: copier copy" copier copy --trust --defaults --vcs-ref=HEAD "$@" "$here" "$dir"
+  if grep -n -e ': warning:' -e 'CMake Warning' "$log"; then
+    fail "$v: copier copy (./dev setup) printed warnings"
+  fi
+  # ./dev setup (Copier's task) built debug, so the editor works on first open
+  [ -x "$dir/dev" ] || fail "$v: ./dev is not executable"
+  [ -f "$dir/build/cmake/debug/compile_commands.json" ] || fail "$v: ./dev setup left no build/cmake/debug/compile_commands.json"
+  [ -x "$dir/build/cmake/debug/$name" ] || fail "$v: ./dev setup did not build build/cmake/debug/$name"
+  grep -q 'compile-commands-dir=${workspaceFolder}/build/cmake/debug' "$dir/.vscode/settings.json" \
+    || fail "$v: .vscode/settings.json does not point clangd at build/cmake/debug"
 
   # The generated tree
-  for f in setup.sh post.rhai CLAUDE.client.md cargo-generate.toml ui; do
+  for f in copier.yml ui; do
     [ ! -e "$dir/$f" ] || fail "$v: $f is left over"
   done
+  if find "$dir" -path "$dir/third-party" -prune -o -name '*.jinja' -print | grep .; then
+    fail "$v: .jinja files left over"
+  fi
+  [ "$(find "$dir" -maxdepth 1 -name '*src*')" = "$dir/src" ] || fail "$v: not exactly one src/"
   for f in CLAUDE.md README.md CMakeLists.txt CMakePresets.json .gitignore docs/core2.md docs/Doxyfile src/main.cpp \
-           .claude/settings.json .vscode/settings.json .vscode/launch.json .vscode/tasks.json; do
+           dev .copier-answers.yml .claude/settings.json \
+           .vscode/settings.json .vscode/launch.json .vscode/tasks.json .vscode/extensions.json; do
     [ -f "$dir/$f" ] || fail "$v: $f is missing"
   done
-  if grep -rIn -e '{{' -e '{%' --exclude-dir=.git --exclude-dir=third-party --exclude-dir=src "$dir"; then
-    fail "$v: unrendered Liquid tags"
+  if grep -rIn -e '{{' -e '{%' --exclude-dir=.git --exclude-dir=third-party --exclude-dir=src --exclude-dir=build --exclude-dir=core2 "$dir"; then
+    fail "$v: unrendered Jinja tags"
   fi
   run "$v: JSON files" python3 -c 'import json, sys; [json.load(open(p)) for p in sys.argv[1:]]' \
-    "$dir/CMakePresets.json" "$dir/.claude/settings.json" "$dir/.vscode/settings.json" "$dir/.vscode/launch.json" "$dir/.vscode/tasks.json"
+    "$dir/CMakePresets.json" "$dir/.claude/settings.json" "$dir/.vscode/settings.json" "$dir/.vscode/launch.json" "$dir/.vscode/tasks.json" \
+    "$dir/.vscode/extensions.json"
 
   # The submodule, its pin, and what CLAUDE.md and the settings take from it
   pinned=$(git -C "$dir/third-party/core2" describe --tags --exact-match 2>/dev/null || true)
@@ -141,33 +161,52 @@ assert fs == { "allowWrite": [g], "denyWrite": [g + "/hooks", g + "/config"] }, 
 ' "$dir/third-party/core2/.claude/settings.local.json" "$gitdir"
   [ -z "$(git -C "$dir/third-party/core2" status --porcelain)" ] || fail "$v: third-party/core2 has changes (settings.local.json not ignored?)"
 
+  # core2's reference, from ./dev setup: built, git-ignored, with its tag file
+  [ -f "$dir/docs/core2/html/index.html" ] || fail "$v: ./dev setup did not build docs/core2/html/index.html"
+  [ -f "$dir/docs/core2/core2.tag" ] || fail "$v: ./dev setup did not write docs/core2/core2.tag"
+  git -C "$dir" check-ignore -q docs/core2 || fail "$v: docs/core2 is not git-ignored"
+
+  # ./dev setup again (after a clone, or to repair): succeeds, keeps the pin
+  run "$v: ./dev setup rerun" "$dir/dev" setup
+  pinned=$(git -C "$dir/third-party/core2" describe --tags --exact-match 2>/dev/null || true)
+  [ "$pinned" = "$version" ] || fail "$v: ./dev setup rerun moved third-party/core2 to '$pinned'"
+
+  # ./dev away from a terminal: no command prints the help, never asks
+  run "$v: ./dev" "$dir/dev"
+  grep -q '^./dev build \[preset\]' "$log" || { cat "$log" >&2; fail "$v: ./dev without a command did not print the help"; }
+  if "$dir/dev" build nosuchpreset </dev/null >"$log" 2>&1; then fail "$v: ./dev build nosuchpreset succeeded"; fi
+  grep -q "unknown preset 'nosuchpreset'" "$log" || { cat "$log" >&2; fail "$v: no message for an unknown preset"; }
+
   # Without the submodule, configuring stops with the fix in the message.
   bare=$out/$name-no-submodule
   mkdir "$bare"
-  cp -R "$dir/CMakeLists.txt" "$dir/CMakePresets.json" "$dir/src" "$bare/"
+  cp -R "$dir/CMakeLists.txt" "$dir/CMakePresets.json" "$dir/src" "$dir/dev" "$bare/"
   if (cd "$bare" && cmake --preset debug) </dev/null >"$log" 2>&1; then
     fail "$v: cmake --preset debug without third-party/core2 succeeded"
   fi
   grep -q 'git submodule update --init' "$log" ||
     { cat "$log" >&2; fail "$v: no submodule message from cmake without third-party/core2"; }
+  # and ./dev build stops there (no terminal, so it does not offer), naming the fix
+  if "$bare/dev" build </dev/null >"$log" 2>&1; then
+    fail "$v: ./dev build without the setup succeeded"
+  fi
+  grep -q 'third-party/core2 is not checked out' "$log" && grep -q 'run ./dev setup first' "$log" ||
+    { cat "$log" >&2; fail "$v: ./dev build without the setup gave no setup message"; }
   rm -rf "$bare"
 
-  # Every preset, warning-free (the compiler's and CMake's)
+  # Every preset through ./dev build (configures the first time), warning-free
+  # (the compiler's and CMake's)
   for m in $modes; do
-    run "$v: cmake --preset $m" sh -c 'cd "$1" && cmake --preset "$2"' sh "$dir" "$m"
+    run "$v: ./dev build $m" "$dir/dev" build "$m"
     if grep -n -e 'warning:' -e 'CMake Warning' "$log"; then
-      fail "$v: cmake --preset $m printed warnings"
-    fi
-    run "$v: cmake --build --preset $m" sh -c 'cd "$1" && cmake --build --preset "$2"' sh "$dir" "$m"
-    if grep -n -e 'warning:' -e 'CMake Warning' "$log"; then
-      fail "$v: cmake --build --preset $m printed warnings"
+      fail "$v: ./dev build $m printed warnings"
     fi
     bin=$dir/build/cmake/$m/$name
     [ -x "$bin" ] || fail "$v: $bin was not built"
     case $ui in
       plain | ncurses)
         # ncurses: no terminal here, so it prints through core2 instead
-        run "$v: run $m" "$bin" one "two words"
+        run "$v: ./dev run $m" "$dir/dev" run "$m" -- one "two words"
         grep -q ': 2 argument(s)' "$log" && grep -q '^  2: two words$' "$log" ||
           { cat "$log" >&2; fail "$v: unexpected output from $bin"; }
         if [ "$ui" = ncurses ] && command -v script >/dev/null; then
@@ -206,19 +245,25 @@ assert any("third-party/core2/src/" in f for f in files), "no entries for core2"
 ' "$dir/build/cmake/debug/compile_commands.json"
   echo "   compile_commands.json: ok"
 
-  # The reference: warning-free (the Doxyfile makes warnings fatal), git-ignored
-  if command -v doxygen >/dev/null; then
-    run "$v: docs target" sh -c 'cd "$1" && cmake --build --preset debug --target docs' sh "$dir"
-    if grep -n -e 'warning:' -e 'error:' "$log"; then
-      fail "$v: the docs target printed warnings"
-    fi
-    [ -f "$dir/docs/html/index.html" ] || fail "$v: docs/html/index.html was not built"
-    git -C "$dir" check-ignore -q docs/html || fail "$v: docs/html is not git-ignored"
-    echo "   docs: ok"
-  else
-    echo "   docs: skipped (no doxygen)"
+  # The reference: warning-free (the Doxyfile makes warnings fatal), git-ignored,
+  # and README.md's link to core2's reference works from it too
+  run "$v: ./dev docs" "$dir/dev" docs
+  if grep -n -e 'warning:' -e 'error:' "$log"; then
+    fail "$v: the docs target printed warnings"
   fi
+  [ -f "$dir/docs/html/index.html" ] || fail "$v: docs/html/index.html was not built"
+  git -C "$dir" check-ignore -q docs/html || fail "$v: docs/html is not git-ignored"
+  grep -q 'href="docs/core2/html/index.html"' "$dir/docs/html/index.html" || fail "$v: docs/html/index.html has no link to core2's reference"
+  [ -f "$dir/docs/html/docs/core2/html/index.html" ] || fail "$v: the link to core2's reference does not resolve from docs/html/"
+  grep -q 'href="docs/core2/html/index.html"' "$dir/README.md" || grep -q '](docs/core2/html/index.html)' "$dir/README.md" || fail "$v: README.md has no link to core2's reference"
+  echo "   docs: ok"
   [ -z "$(git -C "$dir/third-party/core2" status --porcelain)" ] || fail "$v: third-party/core2 has changes after the builds"
+
+  # ./dev clean: one preset's output goes, the others stay
+  run "$v: ./dev clean release" "$dir/dev" clean release
+  [ ! -e "$dir/build/cmake/release/$name" ] || fail "$v: ./dev clean release left build/cmake/release/$name"
+  [ -x "$dir/build/cmake/debug/$name" ] || fail "$v: ./dev clean release removed the debug build"
+  echo "   ./dev: ok"
 }
 
 # Every name first, so a typo stops the run before anything is built.

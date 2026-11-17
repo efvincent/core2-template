@@ -1,0 +1,93 @@
+# {{ project_name }}
+
+A C++26 project on [core2](https://github.com/efvincent/core2) (Orthodox / Handmade C++: modules, no C++ standard library, no exceptions or RTTI), generated from core2-template{% if ui == "imgui" %} with Dear ImGui ({{ imgui_backend }}){% elif ui != "plain" %} with {{ ui }}{% endif %}.
+
+**core2's reference and user guide:** <a href="docs/core2/html/index.html">docs/core2/html/index.html</a>, built from the pinned core2 by `./dev setup` (rebuild both references with `./dev docs`). This project's own reference, `docs/html/index.html`, links core2's names there.
+
+## Prerequisites
+| For | Needs |
+|---|---|
+| Building | `clang++` with C++26 modules and the `clang-scan-deps` of the same LLVM, CMake 3.30 or later, Ninja; `llvm-ar` and `llvm-ranlib` for the `lto` preset |
+{%- if ui == "ncurses" %}
+| The UI | the ncursesw development files (`pkg-config ncursesw`; Arch: `ncurses`) |
+{%- elif ui == "sdl3" or (ui == "imgui" and imgui_backend in ["sdl3_renderer", "sdl3_gpu"]) %}
+| The UI | SDL3 (`pkg-config sdl3`; Arch: `sdl3`) |
+{%- elif ui == "imgui" and imgui_backend == "glfw_opengl3" %}
+| The UI | GLFW and OpenGL (`pkg-config glfw3 gl`; Arch: `glfw`, `libglvnd`) |
+{%- elif ui == "imgui" %}
+| The UI | GLFW, the Vulkan loader and the Vulkan headers (`pkg-config glfw3 vulkan`, and `vulkan/vulkan.h`; Arch: `glfw`, `vulkan-icd-loader`, `vulkan-headers`) |
+{%- endif %}
+{%- if ui != "plain" %}
+| Finding the UI libraries | `pkg-config` |
+{%- endif %}
+| `./dev setup` | git, SSH access to core2's repository (`{{ core2_url }}`){% if ui == "imgui" %}, HTTPS access to GitHub (Dear ImGui){% endif %}, `python3` |
+| The references | Doxygen |
+| The editor | VS Code or VSCodium, with clangd, CMake Tools and CodeLLDB (`.vscode/extensions.json` recommends them) |
+
+`./dev setup` checks for these tools first and names any that are missing.
+
+## Getting started
+Copier ran `./dev setup` when it generated this project: the submodules are added and staged, the debug preset is built, and core2's reference is in `docs/core2/html/`. Nothing is committed yet; make the first commit yourself (`.copier-answers.yml` included: `copier update` reads it).
+
+```sh
+./dev run                # build debug and run it
+./dev                    # or pick from a list
+```
+
+After a fresh clone, `git clone --recurse-submodules <url>`, then `./dev setup` (or any `./dev build`, `run` or `docs`, which offers to run it).
+
+## Building
+One command, `./dev`, over the CMake presets (the tools are under "Prerequisites"):
+
+| Command | Does |
+|---|---|
+| `./dev` | lists the commands and asks for one (at a terminal; otherwise prints the help) |
+| `./dev build [preset]` | configures the preset the first time, then builds `build/cmake/<preset>/{{ project_name }}` |
+| `./dev run [preset] [-- args]` | builds, then runs it with `args` |
+| `./dev docs` | this project's reference, `docs/html/index.html` (fails on any Doxygen warning), and core2's, `docs/core2/html/index.html` |
+| `./dev clean [preset]`, `./dev clean all` | removes a preset's build output, or all of `build/` |
+| `./dev setup` | the submodules at their pins, core2's local Claude Code settings, the debug build, core2's reference. Safe to rerun; it never moves a pin |
+| `./dev help` | the list |
+
+| Preset | Flags |
+|---|---|
+| `debug` | `-O0 -g` |
+| `release` | `-O3 -march=native -DNDEBUG`, plus `-g` for profiling |
+| `lto` | release plus full LTO |
+| `instrument` | AddressSanitizer and UndefinedBehaviorSanitizer |
+
+A missing preset is asked for at a terminal (Enter picks `debug`), and is `debug` anywhere else (editor tasks, scripts, Claude Code). `build`, `run` and `docs` first check that the setup is done (the submodules, and core2's settings for where the project is now), and offer to run it. `./dev run -- debug` passes `debug` to the program instead of choosing the preset.
+
+`./dev` only runs CMake: `cmake --preset <p>` once per preset, then `cmake --build --preset <p>` (with `--target docs`, `core2_docs` or `clean`). Those work directly too. After the first configure, a build reconfigures by itself when needed (a source added or removed under `src/` included).
+
+core2 comes in through `add_subdirectory(third-party/core2)` and the target `core2::core2`, which brings core2's required flags with it; core2 is built from the submodule's working tree, inside this build. Module dependencies come from `clang-scan-deps`. Sources: `src/**/*.cpp` and the project's modules `src/**/*.cppm`.
+
+`-DNDEBUG` comes only from the presets' build types (`CMAKE_CXX_FLAGS_<CONFIG>`), which core2 shares; never put it on a target. A mismatch fails to link (see [docs/core2.md](docs/core2.md), "Flags and core2").
+
+{% if ui == "imgui" -%}
+Dear ImGui (`third-party/imgui`, pinned to `v1.92.8`) is the `imgui` target in `CMakeLists.txt`, compiled with its own flags; bump it the same way as core2 (below). It saves window positions to `imgui.ini` in the working directory (git-ignored).
+
+{% endif -%}
+## Editor
+VS Code or VSCodium. Open the project folder and install the recommended extensions when asked (`.vscode/extensions.json`): clangd, CMake Tools and CodeLLDB (Microsoft's C/C++ extension is marked unwanted; clangd replaces its IntelliSense).
+- **clangd** reads the debug preset's `build/cmake/debug/compile_commands.json` (`--compile-commands-dir` in `.vscode/settings.json`). Its module flags name files the build writes, so the debug preset must be built before clangd can resolve `import core;`; `./dev setup` does that. Another editor's clangd needs the same flag, or a link at the root: `ln -sf build/cmake/debug/compile_commands.json compile_commands.json`.
+- **CMake Tools** uses the presets (`cmake.useCMakePresets`). It keeps the selected preset in the editor's own workspace state, which no project file can set, so on the first open it asks for a configure preset: pick `debug` (first in the list). It remembers it from then on, and its status bar builds and reconfigures that preset.
+- **Tasks** (`.vscode/tasks.json`): `build-debug` (the default build, Ctrl+Shift+B), `build-release` and `docs`, each a `./dev` command.
+- **F5** (CodeLLDB) builds with the `build-debug` task and debugs `build/cmake/debug/{{ project_name }}`, whatever preset CMake Tools has selected.
+
+To pass arguments under F5, set `"args"` in `.vscode/launch.json`, one string per argument: `"args": ["one", "two words"]`. To be asked each time instead, give each argument an input:
+```jsonc
+"args": ["${input:name}"],
+// next to "configurations":
+"inputs": [
+  { "id": "name", "type": "promptString", "description": "Name:", "default": "world" }
+]
+```
+
+The debugger shows some core2 values as `<incomplete type>` (CodeLLDB: `<not available>`): `Result`, `Array`, `string::Split` and other templates defined in one core2 module and instantiated in another. clang 23 writes no debug information for such an instance anywhere, so neither lldb nor gdb can show it; `-fstandalone-debug` does not help. Until a fixed clang, copy the fields you need into plain locals (`u64 v = r.val;`), or use `memory read &r` in the lldb console. core2's `third-party/core2/docs/guide/debugging.md` (core2 `v2.0.1` and later) has the details.
+
+## Docs
+`docs/` holds the project's own pages (Markdown) and `Doxyfile`. `./dev docs` builds the reference from the Doxygen comments in `src/`, with this README as the main page, into `docs/html/` (git-ignored). It builds core2's first (`core2_docs`): names from core2 in this project's comments and signatures link to core2's reference (`TAGFILES` in `Doxyfile`), and so does the link at the top of this README. Any warning fails it, an undocumented public name included; names in a `detail` namespace are left out.
+
+## core2
+core2 is a git submodule at `third-party/core2`, pinned to a release tag. Its user guide, at the pin, starts at `third-party/core2/docs/guide/README.md` (core2 `v2.1.1` and later). How to bump it, and how to fix core2 from here (a core2 session in `third-party/core2`, through core2's own gate): [docs/core2.md](docs/core2.md).

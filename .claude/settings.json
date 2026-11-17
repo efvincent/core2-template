@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "deny": ["Edit(/CLAUDE.md)", "Edit(/.claude/**)"]
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "filesystem": {
+      "denyWrite": ["./CLAUDE.md", "./.claude"]
+    },
+    "network": {
+      "allowedDomains": ["github.com"]
+    }
+  }
+}

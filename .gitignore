@@ -1,2 +1,18 @@
 /.claude/settings.local.json
 /proposals
+
+# Claude Code's sandbox mounts /dev/null over these in the project, so they
+# show up as device files; ignored, so `git add -A` (Copier, on a dirty
+# working tree) skips them. None of them belongs to this repo.
+/.bash_profile
+/.bashrc
+/.gitconfig
+/.gitmodules
+/.idea
+/.mcp.json
+/.profile
+/.ripgreprc
+/.zprofile
+/.zshrc
+/.claude/*
+!/.claude/settings.json
