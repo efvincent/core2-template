@@ -21,10 +21,12 @@ The order of work from the handoff brief, with status (2026-11-17, after the mer
     - clangd on a generated `plain`: 0 errors. The author opened a generated `plain` in VSCodium: extensions, the CMake Tools preset prompt, clangd on `import core;`, F5, core2's reference.
     - `copier copy --trust gh:efvincent/core2-template` generates from the `v1.0.0` tag (`_commit: v1.0.0` in `.copier-answers.yml`), runs `./dev setup`, and leaves `dev` executable (2026-11-17). Inside Claude's sandbox, Copier needs `XDG_CACHE_HOME="$TMPDIR/cache"`: it caches remote templates in `~/.cache/copier`, which the sandbox does not let it write. A local path (as `check.sh` uses) needs no cache.
     - The remote branches `feature/copier` and `feature/cmake` are deleted.
-11. [ ] `./check.sh` for all seven variants (with `WINDOWED=1` on the author's desktop) on `v1.0.0`, since `./dev` and the protections came after the last full run. About five minutes; run when the author asks.
+11. [ ] `./check.sh` for all seven variants (with `WINDOWED=1` on the author's desktop) on `v1.1.0`, since `./dev`, the protections and the clang-tidy step came after the last full run; six variants' `main.cpp` have never been through clang-tidy. About five minutes; run when the author asks.
 12. [x] Releases (decision 16): `CHANGELOG.md` with `v1.0.0`, the README's "Releases", the convention in decision 16 (2026-11-17).
     - [x] The author applies `proposals/claude-md-releases.patch` (the release rule in this repo's `CLAUDE.md`, "Git") and creates the GitHub release for `v1.0.0` from `proposals/release-v1.0.0.md`.
-13. [x] Shift+F5 under CodeLLDB (`cmake.debugConfig`), clang-tidy (decision 17), the machine setup in the README, released as `v1.1.0` (2026-11-17). `./check.sh plain` passed, clang-tidy step included; the other six variants' `main.cpp` have not been through the clang-tidy step (item 11's full run will).
+13. [x] Shift+F5 under CodeLLDB (`cmake.debugConfig`), clang-tidy (decision 17), the machine setup in the README, merged as #4 and tagged `v1.1.0` (2026-11-17). `./check.sh plain` passed, clang-tidy step included; the other six variants' `main.cpp` have not been through the clang-tidy step (item 11's full run will).
+    - In Claude's sandbox, `git branch -m` renames the branch but cannot write `.git/config` (its tracking); `gh` cannot reach `api.github.com`, so the author runs `gh` and checks the release.
+    - c2app3 (`../c2app3`, generated at `v1.0.0`): its author can take `v1.1.0` with `copier update` once its work tree is committed. Until then its Shift+F5 needs `cmake.debugConfig` by hand.
     - [ ] core2 adopts the config: `proposals/core2-clang-tidy.md`, for a core2 session.
 
 ## Open questions
